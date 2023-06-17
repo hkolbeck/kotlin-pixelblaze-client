@@ -1,13 +1,12 @@
 package industries.hannah.pixelblaze
 
-import com.squareup.moshi.JsonClass
-import java.awt.Image
+import java.awt.image.BufferedImage
 
 sealed class Response
 
 //JSON Responses
 
-@JsonClass(generateAdapter = true)
+
 data class Stats(
     val fps: Float,
     val vmerr: Int,
@@ -23,13 +22,13 @@ data class Stats(
     val rebootCounter: Int,
 ) : Response()
 
-@JsonClass(generateAdapter = true)
+
 data class Control(
     val name: String,
     val value: Float,
 )
 
-@JsonClass(generateAdapter = true)
+
 data class SequencerState(
     val name: String,
     val activeProgramId: String,
@@ -42,7 +41,7 @@ data class SequencerState(
     val remainingMs: Int,
 ) : Response()
 
-@JsonClass(generateAdapter = true)
+
 data class Settings(
     val name: String,
     val brandName: String,
@@ -77,7 +76,7 @@ data class Settings(
     val chipId: Int,
 ) : Response()
 
-@JsonClass(generateAdapter = true)
+
 data class Peer(
     val id: Int,
     val ipAddress: String,
@@ -88,18 +87,18 @@ data class Peer(
     val followerCount: UInt,
 )
 
-@JsonClass(generateAdapter = true)
+
 data class PeerResponse(
     val peers: List<Peer>
 ) : Response()
 
-@JsonClass(generateAdapter = true)
+
 data class PixelblazePattern(
     val id: String,
     val durationMs: Int,
 )
 
-@JsonClass(generateAdapter = true)
+
 data class Playlist(
     val id: String,
     val position: Int,
@@ -109,12 +108,17 @@ data class Playlist(
     val numItems: Int,
 ) : Response()
 
-@JsonClass(generateAdapter = true)
+
 data class PlaylistUpdate(
     val id: String,
     val patterns: List<PixelblazePattern>,
 ) : Response()
 
+object Ack
+
+data class UnknownTextResponse(
+    val data: String
+) : Response()
 
 // Binary responses
 
@@ -133,7 +137,8 @@ data class ExpanderChannels(
 ) : Response()
 
 data class PreviewImage(
-    val img: Image
+    val patternId: String,
+    val img: BufferedImage
 ) : Response()
 
 data class Pixel(
@@ -149,3 +154,22 @@ data class PreviewFrame(
 data class AllPatterns(
     val patterns: List<PixelblazePattern>
 ) : Response()
+
+data class UnknownBinaryResponse(
+    val data: ByteArray
+) : Response() {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as UnknownBinaryResponse
+
+        if (!data.contentEquals(other.data)) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        return data.contentHashCode()
+    }
+}

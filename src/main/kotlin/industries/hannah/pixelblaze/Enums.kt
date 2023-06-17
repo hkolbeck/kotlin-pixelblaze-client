@@ -1,7 +1,10 @@
 package industries.hannah.pixelblaze
 
+import com.google.gson.JsonObject
+import io.ktor.websocket.*
+import java.lang.reflect.Type
+import kotlin.experimental.and
 import kotlin.experimental.or
-
 
 enum class BinaryMsgType(val typeVal: Byte) {
     PutSource(1),
@@ -30,21 +33,39 @@ enum class BinaryMsgType(val typeVal: Byte) {
     }
 }
 
+sealed interface ResponseTypeKey {
+    val frameType: FrameType?
+}
+
+data class BinaryResponseTypeKey(
+    val binaryMsgType: BinaryMsgType,
+) : ResponseTypeKey {
+    override val frameType = FrameType.BINARY
+}
+
+data class JsonResponseTypeKey(
+    val matches: (JsonObject) -> Boolean
+) : ResponseTypeKey {
+    override val frameType = FrameType.TEXT
+}
+
+object NoExpectedResponse : ResponseTypeKey {
+    override val frameType: FrameType? = null
+}
+
 enum class FramePosition(val typeVal: Byte) {
     First(1),
     Middle(2),
-    Last(4);
-
-    fun bitwiseOr(other: FramePosition): Byte {
-        return typeVal or other.typeVal
-    }
+    Last(4),
+    Only(5);
 
     companion object {
         fun fromByte(byte: Byte): FramePosition? {
             return when (byte.toInt()) {
-                0 -> First
-                1 -> Middle
+                1 -> First
+                2 -> Middle
                 4 -> Last
+                5 -> Only
                 else -> null
             }
         }
@@ -193,8 +214,11 @@ enum class ColorOrder(val str: String) {
 }
 
 enum class FailureCause {
-    MessageSendFailure,
+    RequestQueueFull,
+    RequestTooLarge,
+    MessageRejected,
     TimedOut,
     MultipartReadInterrupted,
-    ConnectionLost;
+    ConnectionLost,
+    ResponseParseError;
 }
