@@ -1,21 +1,24 @@
 package industries.hannah.pixelblaze
 
-import java.net.Inet4Address
-import java.net.InetAddress
 import java.net.URI
 
 class PixelblazeConfig(
     val address: URI,
-    port: UInt = 81u,
+
+    port: UShort = 81u,
     requestQueueDepth: UInt = 50u,
     awaitingResponseQueueDepth: UInt = 50u,
     inboundBufferQueueDepth: UInt = 10u,
-    sleepMsIfNoTasks: UInt = 25u,
-    ) {
-    
+    outboundFrameSize: UInt = 1024u,
+    maxInboundMessagesBeforeOutbound: UInt = 50u,
+    maxOutboundMessagesBeforeInbound: UInt = 3u
+) {
     val inboundBufferQueueDepth: Int = inboundBufferQueueDepth.toInt()
     val port: Int = port.toInt()
     val requestQueueDepth: Int = requestQueueDepth.toInt()
     val awaitingResponseQueueDepth: Int = awaitingResponseQueueDepth.toInt()
-    val sleepMsIfNoTasks: Int = sleepMsIfNoTasks.toInt()
+    val outboundFrameSize: Int = outboundFrameSize.toInt()
+    val maxInboundMessagesBeforeOutbound: Int = maxInboundMessagesBeforeOutbound.toInt()
+    val maxOutboundMessagesBeforeInbound: Int = maxOutboundMessagesBeforeInbound.toInt()
+
 }

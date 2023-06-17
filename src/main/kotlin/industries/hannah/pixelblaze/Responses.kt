@@ -6,7 +6,6 @@ sealed class Response
 
 //JSON Responses
 
-
 data class Stats(
     val fps: Float,
     val vmerr: Int,
@@ -22,38 +21,43 @@ data class Stats(
     val rebootCounter: Int,
 ) : Response()
 
-
 data class Control(
     val name: String,
     val value: Float,
 )
 
-
-data class SequencerState(
+data class ActiveProgram(
     val name: String,
-    val activeProgramId: String,
+    val id: String,
     val controls: List<Control>,
-    val sequencerMode: SequencerMode,
-    val runSequencer: Boolean,
-    val playlistPos: Int,
-    val playlistId: String,
+)
+
+data class PlaylistState(
+    val position: Int,
+    val id: String,
     val ttlMs: Int,
     val remainingMs: Int,
-) : Response()
+)
 
+data class SequencerState(
+    val activeProgram: ActiveProgram,
+    val playlistState: PlaylistState,
+    val sequencerMode: SequencerMode,
+    val runSequencer: Boolean
+) : Response()
 
 data class Settings(
     val name: String,
     val brandName: String,
     val pixelCount: Int,
     val brightness: Float,
-    val maxBrightness: Int,
-    val colorOrder: String,
+    val maxBrightness: Float,
+    val colorOrder: ColorOrder,
     val dataSpeedHz: Int,
     val ledType: LedType,
     val sequenceTimerMs: Int,
     val transitionDurationMs: Int,
-    val sequencerMode: Int,
+    val sequencerMode: SequencerMode,
     val runSequencer: Boolean,
     val simpleUiMode: Boolean,
     val learningUiMode: Boolean,
@@ -76,7 +80,6 @@ data class Settings(
     val chipId: Int,
 ) : Response()
 
-
 data class Peer(
     val id: Int,
     val ipAddress: String,
@@ -87,17 +90,14 @@ data class Peer(
     val followerCount: UInt,
 )
 
-
 data class PeerResponse(
     val peers: List<Peer>
 ) : Response()
-
 
 data class PixelblazePattern(
     val id: String,
     val durationMs: Int,
 )
-
 
 data class Playlist(
     val id: String,
@@ -105,9 +105,7 @@ data class Playlist(
     val currentDurationMs: Int,
     val remainingCurrentMs: Int,
     val patterns: List<PixelblazePattern>,
-    val numItems: Int,
 ) : Response()
-
 
 data class PlaylistUpdate(
     val id: String,
@@ -115,10 +113,6 @@ data class PlaylistUpdate(
 ) : Response()
 
 object Ack
-
-data class UnknownTextResponse(
-    val data: String
-) : Response()
 
 // Binary responses
 
@@ -154,22 +148,3 @@ data class PreviewFrame(
 data class AllPatterns(
     val patterns: List<PixelblazePattern>
 ) : Response()
-
-data class UnknownBinaryResponse(
-    val data: ByteArray
-) : Response() {
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
-
-        other as UnknownBinaryResponse
-
-        if (!data.contentEquals(other.data)) return false
-
-        return true
-    }
-
-    override fun hashCode(): Int {
-        return data.contentHashCode()
-    }
-}

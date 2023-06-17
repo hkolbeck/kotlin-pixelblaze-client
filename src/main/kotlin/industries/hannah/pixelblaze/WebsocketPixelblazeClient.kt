@@ -28,8 +28,8 @@ class WebsocketPixelblazeClient(
     private val debugLog: (String) -> Unit = { _ -> },
 ) : PixelblazeClient {
     private val shouldRun = AtomicBoolean(true)
-    private val requestQueue: BlockingQueue<PixelblazeIO> = ArrayBlockingQueue(config.requestQueueDepth)
-    private val awaitingResponse: BlockingQueue<PixelblazeIO> =
+    private val requestQueue: BlockingQueue<PixelblazeIo<*>> = ArrayBlockingQueue(config.requestQueueDepth)
+    private val awaitingResponse: BlockingQueue<PixelblazeIo<*>> =
         ArrayBlockingQueue(config.awaitingResponseQueueDepth)
 
     private val binaryFrames: ArrayDeque<InputStream> = ArrayDeque(config.inboundBufferQueueDepth)
@@ -54,169 +54,217 @@ class WebsocketPixelblazeClient(
         ) {
             while (shouldRun.get()) {
                 try {
-                    awaitingResponse.removeIf { io -> io.satisfied || io.responseTypeKey is NoExpectedResponse }
-                    val headOfQueue = awaitingResponse.peek()
+                    awaitingResponse.removeIf { io -> io.satisfied || io.responseTypeKey is NoResponseManaged }
+                    var ingressed = 0
 
                     // There are basically 3 variables at play here, and we have to cover all the combinations:
                     //  1. The frame type of the received message (BINARY/TEXT)
                     //  2. Whether the request queue had anyone waiting in it
                     //  3. If it did, does the message type they're seeking match the received message?
-                    incoming.tryReceive().getOrNull()?.run {
-                        when (this.frameType) {
-                            FrameType.TEXT -> {
-                                try {
-                                    gson.fromJson(
-                                        InputStreamReader(ByteArrayInputStream(this.data)),
-                                        JsonObject::class.java
-                                    )
-                                } catch (e: JsonParseException) {
-                                    errorLog("Couldn't parse message as JSON object", e)
-                                    null
-                                }?.run {
-                                    if (headOfQueue != null) {
-                                        when (headOfQueue) {
-                                            is TextResponseIO<*> -> {
-                                                if (headOfQueue.jsonResponseTypeKey.matches(this)) {
-                                                    headOfQueue.extractAndHandle(this)
-                                                    headOfQueue.satisfied = true
-                                                    awaitingResponse.poll()!! //Discard head, we peeked
-                                                } else {
-                                                    handleUnrequestedObject(this)
-                                                }
-                                            }
-
-                                            is BinaryResponseIO<*> -> handleUnrequestedObject(this)
-                                            is NoResponseIO<*> -> {}
-                                        }
-                                    } else {
-                                        handleUnrequestedObject(this)
-                                    }
-
-                                    jsonMessageWatchers.forEach { it.accept(this) }
-                                }
-                            }
-
-                            FrameType.BINARY -> {
-                                val frame = this
-                                this.data.getOrNull(0)?.run {
-                                    BinaryMsgType.fromByte(this)
-                                }?.run {
-                                    val msgType = this
-                                    when (msgType) {
-                                        BinaryMsgType.PreviewFrame -> Pair(
-                                            msgType, ByteArrayInputStream(
-                                                frame.data,
-                                                1,
-                                                frame.data.size - 1
-                                            )
+                    while (ingressed < config.maxInboundMessagesBeforeOutbound) {
+                        incoming.tryReceive().getOrNull()?.run {
+                            val headOfQueue = awaitingResponse.peek()
+                            when (this.frameType) {
+                                FrameType.TEXT -> {
+                                    try {
+                                        gson.fromJson(
+                                            InputStreamReader(ByteArrayInputStream(this.data)),
+                                            JsonObject::class.java
                                         )
-
-                                        else -> {
-                                            frame.data.getOrNull(1)?.run {
-                                                FramePosition.fromByte(this)
-                                            }?.run {
-                                                when (this) {
-                                                    FramePosition.First -> {
-                                                        if (binaryFrames.size > 0) {
-                                                            addFrameToBuffer(frame)
-                                                            activeMessageType = msgType
-                                                        } else {
-                                                            errorLog(
-                                                                "Got 'first' message, but was already buffering",
-                                                                null
-                                                            )
-                                                            activeMessageType = null
-                                                            binaryFrames.clear()
-                                                        }
-
-                                                        null
+                                    } catch (e: JsonParseException) {
+                                        errorLog("Couldn't parse message as JSON object", e)
+                                        null
+                                    }?.run {
+                                        if (headOfQueue != null) {
+                                            when (headOfQueue) {
+                                                is TextResponseIo<*> -> {
+                                                    if (headOfQueue.jsonResponseTypeKey.matches(this)) {
+                                                        headOfQueue.extractAndHandle(this)
+                                                        headOfQueue.satisfied = true
+                                                        awaitingResponse.poll()!! //Discard head, we peeked
+                                                    } else {
+                                                        handleUnrequestedObject(this)
                                                     }
+                                                }
 
-                                                    FramePosition.Middle -> {
-                                                        if (binaryFrames.size > 0) {
-                                                            if (activeMessageType != msgType) {
-                                                                errorLog("Got middle message with wrong type", null)
-                                                                activeMessageType = null
-                                                                binaryFrames.clear()
-                                                            } else if (binaryFrames.size + 1 <= config.inboundBufferQueueDepth) {
+                                                is BinaryResponseIo<*> -> {}
+                                                is NoResponseIo<*> -> {}
+                                            }
+                                        } else {
+                                            handleUnrequestedObject(this)
+                                        }
+
+                                        jsonMessageWatchers.forEach { it.accept(this) }
+                                    }
+                                }
+
+                                FrameType.BINARY -> {
+                                    val frame = this
+                                    this.data.getOrNull(0)?.run {
+                                        BinaryMsgType.fromByte(this)
+                                    }?.run {
+                                        val msgType = this
+                                        when (msgType) {
+                                            BinaryMsgType.PreviewFrame -> Pair(
+                                                msgType, ByteArrayInputStream(
+                                                    frame.data,
+                                                    1,
+                                                    frame.data.size - 1
+                                                )
+                                            )
+
+                                            else -> {
+                                                frame.data.getOrNull(1)?.run {
+                                                    FramePosition.fromByte(this)
+                                                }?.run {
+                                                    when (this) {
+                                                        FramePosition.First -> {
+                                                            if (binaryFrames.size > 0) {
                                                                 addFrameToBuffer(frame)
+                                                                activeMessageType = msgType
                                                             } else {
-                                                                errorLog("Inbound buffer full", null)
+                                                                errorLog(
+                                                                    "Got 'first' message, but was already buffering",
+                                                                    null
+                                                                )
                                                                 activeMessageType = null
                                                                 binaryFrames.clear()
                                                             }
-                                                        } else {
-                                                            errorLog("Got a middle message but no start", null)
-                                                            activeMessageType = null
-                                                            binaryFrames.clear()
-                                                        }
-                                                        null
-                                                    }
 
-                                                    FramePosition.Last -> {
-                                                        if (binaryFrames.size > 0) {
-                                                            if (activeMessageType == msgType) {
-                                                                activeMessageType = null
-                                                                val concatStream: InputStream = binaryFrames.fold(
-                                                                    ByteArrayInputStream(ByteArray(0))
-                                                                ) { acc: InputStream, stream ->
-                                                                    SequenceInputStream(acc, stream)
-                                                                }
-                                                                binaryFrames.clear()
-                                                                Pair(msgType, concatStream)
-                                                            } else {
-                                                                errorLog("Got last message with wrong type", null)
-                                                                activeMessageType = null
-                                                                binaryFrames.clear()
-                                                                null
-                                                            }
-                                                        } else {
-                                                            errorLog("Got a last message but no start", null)
-                                                            activeMessageType = null
-                                                            binaryFrames.clear()
                                                             null
                                                         }
-                                                    }
 
-                                                    FramePosition.Only -> {
-                                                        Pair<BinaryMsgType, InputStream>(
-                                                            msgType, ByteArrayInputStream(
-                                                                frame.data,
-                                                                2,
-                                                                frame.data.size - 2
+                                                        FramePosition.Middle -> {
+                                                            if (binaryFrames.size > 0) {
+                                                                if (activeMessageType != msgType) {
+                                                                    errorLog("Got middle message with wrong type", null)
+                                                                    activeMessageType = null
+                                                                    binaryFrames.clear()
+                                                                } else if (binaryFrames.size + 1 <= config.inboundBufferQueueDepth) {
+                                                                    addFrameToBuffer(frame)
+                                                                } else {
+                                                                    errorLog("Inbound buffer full", null)
+                                                                    activeMessageType = null
+                                                                    binaryFrames.clear()
+                                                                }
+                                                            } else {
+                                                                errorLog("Got a middle message but no start", null)
+                                                                activeMessageType = null
+                                                                binaryFrames.clear()
+                                                            }
+                                                            null
+                                                        }
+
+                                                        FramePosition.Last -> {
+                                                            if (binaryFrames.size > 0) {
+                                                                if (activeMessageType == msgType) {
+                                                                    activeMessageType = null
+                                                                    val concatStream: InputStream = binaryFrames.fold(
+                                                                        ByteArrayInputStream(ByteArray(0))
+                                                                    ) { acc: InputStream, stream ->
+                                                                        SequenceInputStream(acc, stream)
+                                                                    }
+                                                                    binaryFrames.clear()
+                                                                    Pair(msgType, concatStream)
+                                                                } else {
+                                                                    errorLog("Got last message with wrong type", null)
+                                                                    activeMessageType = null
+                                                                    binaryFrames.clear()
+                                                                    null
+                                                                }
+                                                            } else {
+                                                                errorLog("Got a last message but no start", null)
+                                                                activeMessageType = null
+                                                                binaryFrames.clear()
+                                                                null
+                                                            }
+                                                        }
+
+                                                        FramePosition.Only -> {
+                                                            Pair<BinaryMsgType, InputStream>(
+                                                                msgType, ByteArrayInputStream(
+                                                                    frame.data,
+                                                                    2,
+                                                                    frame.data.size - 2
+                                                                )
                                                             )
-                                                        )
+                                                        }
                                                     }
                                                 }
                                             }
                                         }
-                                    }
-                                }?.run {
-                                    when (headOfQueue) {
-                                        null -> handleUnrequestedBinary(this.first, this.second)
-                                        is BinaryResponseIO<*> -> {
-                                            if (headOfQueue.binResponseTypeKey.binaryMsgType == this.first) {
-                                                headOfQueue.handleRaw(this.second)
-                                                headOfQueue.satisfied = true
-                                                awaitingResponse.poll()!!
-                                            } else {
+                                    }?.run {
+                                        when (headOfQueue) {
+                                            null -> handleUnrequestedBinary(this.first, this.second)
+                                            is BinaryResponseIo<*> -> {
+                                                if (headOfQueue.binResponseTypeKey.binaryMsgType == this.first) {
+                                                    headOfQueue.handleRaw(this.second)
+                                                    headOfQueue.satisfied = true
+                                                    awaitingResponse.poll()!!
+                                                } else {
+                                                    handleUnrequestedBinary(this.first, this.second)
+                                                }
+                                            }
+
+                                            is TextResponseIo<*> -> {
                                                 handleUnrequestedBinary(this.first, this.second)
                                             }
-                                        }
 
-                                        is TextResponseIO<*> -> {
-                                            handleUnrequestedBinary(this.first, this.second)
+                                            is NoResponseIo<*> -> {}
                                         }
+                                    }
+                                }
 
-                                        is NoResponseIO<*> -> {}
+                                FrameType.CLOSE -> TODO()
+                                FrameType.PING -> TODO()
+                                FrameType.PONG -> TODO()
+                            }
+                            true
+                        } ?: break
+
+                        ingressed++
+                    }
+
+                    var egressed = 0
+                    var reqHandleFailed = false
+                    while (!reqHandleFailed && egressed < config.maxOutboundMessagesBeforeInbound) {
+                        requestQueue.poll()?.run {
+                            val io = this
+                            when (this.request) {
+                                is JsonRequest<*> -> listOf(this.request.toFrame(gson))
+
+                                is BinaryRequest -> this.request.toFrames(config.outboundFrameSize) ?: run {
+                                    reportFailure(this.failureNotifier, FailureCause.RequestTooLarge)
+                                    listOf()
+                                }
+
+                                is NoopRequest -> listOf()
+                            }.run {
+                                for (frame in this) {
+                                    try {
+                                        outgoing.send(frame)
+                                    } catch (t: Throwable) {
+                                        reportFailure(
+                                            notifier = io.failureNotifier,
+                                            cause = FailureCause.MessageRejected,
+                                            thrown = t
+                                        )
+                                        reqHandleFailed = true
+                                        break
+                                    }
+                                }
+
+                                if (!reqHandleFailed) {
+                                    if (io.responseTypeKey !is NoResponseManaged) {
+                                        if (!awaitingResponse.offer(io)) {
+                                            io.failureNotifier(PixelblazeException(FailureCause.AwaitingResponseQueueFull))
+                                            reqHandleFailed = true
+                                        }
                                     }
                                 }
                             }
-
-                            FrameType.CLOSE -> TODO()
-                            FrameType.PING -> TODO()
-                            FrameType.PONG -> TODO()
-                        }
+                        } ?: break
+                        egressed++
                     }
                 } catch (t: Throwable) {
                     errorLog("Unexpected error in main loop", t)
@@ -237,20 +285,25 @@ class WebsocketPixelblazeClient(
         )
     }
 
-    private fun parseBinaryResp(requestData: ByteArray): Response? {
-        TODO()
-    }
-
-    private fun parseJsonResp(requestData: ByteArray): Response? {
-        TODO()
+    private fun reportFailure(
+        notifier: FailureNotifier,
+        cause: FailureCause,
+        msg: String = "",
+        thrown: Throwable? = null
+    ) {
+        try {
+            throw PixelblazeException(cause, msg, thrown)
+        } catch (p: PixelblazeException) {
+            notifier(p)
+        }
     }
 
     private fun handleUnrequestedBinary(msgType: BinaryMsgType, stream: InputStream) {
-        TODO()
+        unhandledBinaryWatchers[msgType]?.run { this.accept(stream) }
     }
 
     private fun handleUnrequestedObject(obj: JsonObject) {
-        TODO()
+
     }
 
     override fun getPatterns(handler: (AllPatterns) -> Unit, onFailure: FailureNotifier) {

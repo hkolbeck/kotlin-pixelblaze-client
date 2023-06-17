@@ -2,9 +2,6 @@ package industries.hannah.pixelblaze
 
 import com.google.gson.JsonObject
 import io.ktor.websocket.*
-import java.lang.reflect.Type
-import kotlin.experimental.and
-import kotlin.experimental.or
 
 enum class BinaryMsgType(val typeVal: Byte) {
     PutSource(1),
@@ -49,7 +46,7 @@ data class JsonResponseTypeKey(
     override val frameType = FrameType.TEXT
 }
 
-object NoExpectedResponse : ResponseTypeKey {
+object NoResponseManaged : ResponseTypeKey {
     override val frameType: FrameType? = null
 }
 
@@ -216,6 +213,7 @@ enum class ColorOrder(val str: String) {
 enum class FailureCause {
     RequestQueueFull,
     RequestTooLarge,
+    AwaitingResponseQueueFull,
     MessageRejected,
     TimedOut,
     MultipartReadInterrupted,
