@@ -1,9 +1,8 @@
 package industries.hannah.pixelblaze
 
-import com.google.gson.JsonObject
 import io.ktor.websocket.*
 
-enum class BinaryMsgType(val typeVal: Byte) {
+enum class BinaryTypeFlag(val typeVal: Byte) {
     PutSource(1),
     PutByteCode(3),
     PreviewImage(4),
@@ -14,7 +13,7 @@ enum class BinaryMsgType(val typeVal: Byte) {
     ExpanderChannels(9);
 
     companion object {
-        fun fromByte(byte: Byte): BinaryMsgType? {
+        fun fromByte(byte: Byte): BinaryTypeFlag? {
             return when (byte.toInt()) {
                 1 -> PutSource //Unsupported
                 3 -> PutByteCode //Unsupported
@@ -30,23 +29,8 @@ enum class BinaryMsgType(val typeVal: Byte) {
     }
 }
 
-sealed interface ResponseTypeKey {
-    val frameType: FrameType?
-}
 
-data class BinaryResponseTypeKey(
-    val binaryMsgType: BinaryMsgType,
-) : ResponseTypeKey {
-    override val frameType = FrameType.BINARY
-}
-
-data class JsonResponseTypeKey(
-    val matches: (JsonObject) -> Boolean
-) : ResponseTypeKey {
-    override val frameType = FrameType.TEXT
-}
-
-object NoResponseManaged : ResponseTypeKey {
+object NoResponseExpected : InboundFrame {
     override val frameType: FrameType? = null
 }
 

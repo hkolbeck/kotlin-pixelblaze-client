@@ -22,7 +22,7 @@ import java.util.function.Consumer
 class WebsocketPixelblazeClient(
     private val config: PixelblazeConfig,
     private val jsonMessageWatchers: List<Consumer<JsonObject>> = listOf(),
-    private val unhandledBinaryWatchers: Map<BinaryMsgType, Consumer<InputStream>> = mapOf(),
+    private val unhandledBinaryWatchers: Map<BinaryTypeFlag, Consumer<InputStream>> = mapOf(),
     private val errorLog: (String?, Throwable?) -> Unit = { _, _ -> },
     private val infoLog: (String) -> Unit = { _ -> },
     private val debugLog: (String) -> Unit = { _ -> },
@@ -31,9 +31,10 @@ class WebsocketPixelblazeClient(
     private val requestQueue: BlockingQueue<PixelblazeIo<*>> = ArrayBlockingQueue(config.requestQueueDepth)
     private val awaitingResponse: BlockingQueue<PixelblazeIo<*>> =
         ArrayBlockingQueue(config.awaitingResponseQueueDepth)
+    private val awaitingResponseQueues: MutableMap<Class<*>, BlockingQueue<PixelblazeIo<*>>> = mutableMapOf()
 
     private val binaryFrames: ArrayDeque<InputStream> = ArrayDeque(config.inboundBufferQueueDepth)
-    private var activeMessageType: BinaryMsgType? = null
+    private var activeMessageType: BinaryTypeFlag? = null
 
     private val gson = GsonBuilder().create()
 
@@ -54,7 +55,7 @@ class WebsocketPixelblazeClient(
         ) {
             while (shouldRun.get()) {
                 try {
-                    awaitingResponse.removeIf { io -> io.satisfied || io.responseTypeKey is NoResponseManaged }
+                    awaitingResponse.removeIf { io -> io.satisfied || io.inboundFrame is NoResponseManaged }
                     var ingressed = 0
 
                     // There are basically 3 variables at play here, and we have to cover all the combinations:
@@ -77,21 +78,17 @@ class WebsocketPixelblazeClient(
                                     }?.run {
                                         if (headOfQueue != null) {
                                             when (headOfQueue) {
-                                                is TextResponseIo<*> -> {
+                                                is JsonResponseIo<*> -> {
                                                     if (headOfQueue.jsonResponseTypeKey.matches(this)) {
                                                         headOfQueue.extractAndHandle(this)
                                                         headOfQueue.satisfied = true
                                                         awaitingResponse.poll()!! //Discard head, we peeked
-                                                    } else {
-                                                        handleUnrequestedObject(this)
                                                     }
                                                 }
 
                                                 is BinaryResponseIo<*> -> {}
                                                 is NoResponseIo<*> -> {}
                                             }
-                                        } else {
-                                            handleUnrequestedObject(this)
                                         }
 
                                         jsonMessageWatchers.forEach { it.accept(this) }
@@ -101,11 +98,11 @@ class WebsocketPixelblazeClient(
                                 FrameType.BINARY -> {
                                     val frame = this
                                     this.data.getOrNull(0)?.run {
-                                        BinaryMsgType.fromByte(this)
+                                        BinaryTypeFlag.fromByte(this)
                                     }?.run {
                                         val msgType = this
                                         when (msgType) {
-                                            BinaryMsgType.PreviewFrame -> Pair(
+                                            BinaryTypeFlag.PreviewFrame -> Pair(
                                                 msgType, ByteArrayInputStream(
                                                     frame.data,
                                                     1,
@@ -181,7 +178,7 @@ class WebsocketPixelblazeClient(
                                                         }
 
                                                         FramePosition.Only -> {
-                                                            Pair<BinaryMsgType, InputStream>(
+                                                            Pair<BinaryTypeFlag, InputStream>(
                                                                 msgType, ByteArrayInputStream(
                                                                     frame.data,
                                                                     2,
@@ -206,7 +203,7 @@ class WebsocketPixelblazeClient(
                                                 }
                                             }
 
-                                            is TextResponseIo<*> -> {
+                                            is JsonResponseIo<*> -> {
                                                 handleUnrequestedBinary(this.first, this.second)
                                             }
 
@@ -218,6 +215,16 @@ class WebsocketPixelblazeClient(
                                 FrameType.CLOSE -> TODO()
                                 FrameType.PING -> TODO()
                                 FrameType.PONG -> TODO()
+                            }
+                            if (headOfQueue?.satisfied != true
+                                && headOfQueue.inboundFrame == InboundBinaryFrame(BinaryTypeFlag.ExpanderChannels)
+                            ) {
+                                // Expander channel requests can come in out of order, if that happens we shuffle to
+                                // the back of the request queue and special case handling when we receive an inbound
+                                // expander message. This might cause backwards dispatch if multiple expander requests
+                                // exist at once, but so be it
+                                awaitingResponse.poll()!!
+                                awaitingResponse.offer(headOfQueue)
                             }
                             true
                         } ?: break
@@ -231,9 +238,9 @@ class WebsocketPixelblazeClient(
                         requestQueue.poll()?.run {
                             val io = this
                             when (this.request) {
-                                is JsonRequest<*> -> listOf(this.request.toFrame(gson))
+                                is OutboundJson<*> -> listOf(this.request.toFrame(gson))
 
-                                is BinaryRequest -> this.request.toFrames(config.outboundFrameSize) ?: run {
+                                is BinaryOutbound -> this.request.toFrames(config.outboundFrameSize) ?: run {
                                     reportFailure(this.failureNotifier, FailureCause.RequestTooLarge)
                                     listOf()
                                 }
@@ -255,7 +262,7 @@ class WebsocketPixelblazeClient(
                                 }
 
                                 if (!reqHandleFailed) {
-                                    if (io.responseTypeKey !is NoResponseManaged) {
+                                    if (io.inboundFrame !is NoResponseManaged) {
                                         if (!awaitingResponse.offer(io)) {
                                             io.failureNotifier(PixelblazeException(FailureCause.AwaitingResponseQueueFull))
                                             reqHandleFailed = true
@@ -298,7 +305,7 @@ class WebsocketPixelblazeClient(
         }
     }
 
-    private fun handleUnrequestedBinary(msgType: BinaryMsgType, stream: InputStream) {
+    private fun handleUnrequestedBinary(msgType: BinaryTypeFlag, stream: InputStream) {
         unhandledBinaryWatchers[msgType]?.run { this.accept(stream) }
     }
 
@@ -306,11 +313,11 @@ class WebsocketPixelblazeClient(
 
     }
 
-    override fun getPatterns(handler: (AllPatterns) -> Unit, onFailure: FailureNotifier) {
+    override fun getPatterns(handler: (ProgramList) -> Unit, onFailure: FailureNotifier) {
         TODO("Not yet implemented")
     }
 
-    override fun getPatternsSync(): AllPatterns {
+    override fun getPatternsSync(): ProgramList {
         TODO("Not yet implemented")
     }
 
@@ -455,7 +462,7 @@ class WebsocketPixelblazeClient(
         TODO("Not yet implemented")
     }
 
-    override fun rawBinaryRequest(requestType: BinaryMsgType, requestData: ByteArray, canBeSplit: Boolean) {
+    override fun rawBinaryRequest(requestType: BinaryTypeFlag, requestData: ByteArray, canBeSplit: Boolean) {
         TODO("Not yet implemented")
     }
 
@@ -463,6 +470,21 @@ class WebsocketPixelblazeClient(
         shouldRun.set(false)
         runBlocking {
             requestHandler.join()
+        }
+    }
+
+    class Builder {
+        private val config: PixelblazeConfig? = null
+        private val jsonMessageWatchers: Map<Class<*>, MutableList<Consumer<InboundMessage>>> = mutableMapOf()
+        private val unhandledBinaryWatchers: Map<BinaryTypeFlag, Consumer<InputStream>> = mutableMapOf()
+        private val errorLog: (String?, Throwable?) -> Unit = { _, _ -> },
+        private val infoLog: (String) -> Unit = { _ -> },
+        private val debugLog: (String) -> Unit = { _ -> },
+    }
+
+    companion object {
+        fun builder(): Builder {
+            return Builder()
         }
     }
 }
