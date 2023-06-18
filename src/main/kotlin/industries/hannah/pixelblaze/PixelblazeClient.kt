@@ -9,22 +9,26 @@ import java.util.*
 
 typealias WatcherID = UUID
 typealias ParserID = UUID
-//TODO Look for field not there to distinguish playlist from playlistupdate
 
 interface PixelblazeClient : Closeable {
 
     ////// Write
-    fun <Out> issueOutbound(val type: Outbound): Boolean
+    fun <Out, Wrapper : OutboundMessage<*, Out>> issueOutbound(type: Outbound<Out>, msg: Wrapper): Boolean
 
-    suspend fun <Out, Resp : InboundMessage> issueOutboundAndWait(
-        out: Out,
+    suspend fun <Out, Wrapper : OutboundMessage<*, Out>, Resp : InboundMessage> issueOutboundAndWait(
+        type: Outbound<Out>,
+        msg: Wrapper,
         inboundType: Inbound<Resp>,
         maxWait: Duration
     ): Resp?
 
-    suspend fun <Out> repeatOutbound(out: Out, interval: Duration)
+    suspend fun <Out, Wrapper : OutboundMessage<*, Out>> repeatOutbound(
+        type: Outbound<Out>,
+        msg: Wrapper,
+        interval: Duration
+    )
 
-    fun <T> saveAfter(wrapper: (T, Boolean) -> Outbound, saveAfter: Duration): Channel<T>
+    fun <T, Out> saveAfter(wrapperBuilder: (T, Boolean) -> OutboundMessage<*, Out>, saveAfter: Duration): Channel<T>
 
 
     /////// Read
@@ -34,19 +38,24 @@ interface PixelblazeClient : Closeable {
         handler: (ParsedType) -> Unit
     ): WatcherID
 
-    fun removeWatcher(id: WatcherID)
+    fun removeWatcher(id: WatcherID): Boolean
 
 
-    fun addJsonParser(parser: (JsonObject) -> InboundMessage?, priority: Int): ParserID
-    fun setBinaryParser(msgType: BinaryTypeFlag, parser: (InputStream) -> InboundMessage?): ParserID
-    fun removeParser(id: ParserID)
+    fun <ParsedType : InboundMessage> addJsonParser(
+        msgType: InboundText<ParsedType>,
+        parser: (JsonObject) -> ParsedType?,
+        priority: Int
+    ): ParserID
 
+    fun <ParsedType : InboundMessage> setBinaryParser(
+        msgType: InboundBinary<ParsedType>,
+        parser: (InputStream) -> ParsedType?
+    ): ParserID
+
+    fun removeParser(id: ParserID): Boolean
+    fun removeBinaryParser(msgType: InboundBinary<*>): ParserID?
 
     ///// Write TODO
-
-    fun setJsonSerializer()
-
-    fun setBinarySerializer()
 
     companion object {
         const val DEFAULT_PLAYLIST = "_defaultplaylist_"

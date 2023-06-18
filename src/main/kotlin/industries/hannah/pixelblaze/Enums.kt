@@ -1,7 +1,5 @@
 package industries.hannah.pixelblaze
 
-import io.ktor.websocket.*
-
 enum class BinaryTypeFlag(val typeVal: Byte) {
     PutSource(1),
     PutByteCode(3),
@@ -27,11 +25,6 @@ enum class BinaryTypeFlag(val typeVal: Byte) {
             }
         }
     }
-}
-
-
-object NoResponseExpected : InboundFrame {
-    override val frameType: FrameType? = null
 }
 
 enum class FramePosition(val typeVal: Byte) {
@@ -192,15 +185,4 @@ enum class ColorOrder(val str: String) {
             }
         }
     }
-}
-
-enum class FailureCause {
-    RequestQueueFull,
-    RequestTooLarge,
-    AwaitingResponseQueueFull,
-    MessageRejected,
-    TimedOut,
-    MultipartReadInterrupted,
-    ConnectionLost,
-    ResponseParseError;
 }

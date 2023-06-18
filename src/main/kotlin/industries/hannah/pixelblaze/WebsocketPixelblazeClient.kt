@@ -1,485 +1,232 @@
 package industries.hannah.pixelblaze
 
-import com.google.gson.GsonBuilder
-import com.google.gson.JsonObject
-import com.google.gson.JsonParseException
+import com.google.gson.Gson
 import io.ktor.client.*
 import io.ktor.client.plugins.websocket.*
 import io.ktor.http.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.*
-import java.awt.Image
-import java.io.ByteArrayInputStream
+import kotlinx.coroutines.channels.ChannelResult
 import java.io.InputStream
-import java.io.InputStreamReader
-import java.io.SequenceInputStream
-import java.time.Duration
+import java.net.URI
+import java.time.Instant
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.BlockingQueue
-import java.util.concurrent.atomic.AtomicBoolean
-import java.util.function.Consumer
+import java.util.concurrent.PriorityBlockingQueue
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.locks.ReadWriteLock
+import java.util.concurrent.locks.ReentrantReadWriteLock
+import kotlin.time.DurationUnit
+import kotlin.time.toDuration
 
-class WebsocketPixelblazeClient(
+class WebsocketPixelblazeClient internal constructor(
+    private val address: String,
+    private val port: Int,
+    private val watchers: MutableMap<Inbound<InboundMessage>, (InboundMessage) -> Unit>,
+    private val textParsers: PriorityBlockingQueue<TextParser<*>>,
+    private val binaryParsers: MutableMap<InboundBinary<*>, SerialParser<*>>,
+    private val connectionWatcher: (ConnectionStatus, String?, Throwable?) -> Unit,
     private val config: PixelblazeConfig,
-    private val jsonMessageWatchers: List<Consumer<JsonObject>> = listOf(),
-    private val unhandledBinaryWatchers: Map<BinaryTypeFlag, Consumer<InputStream>> = mapOf(),
+    private val gson: Gson,
+    private val httpClient: HttpClient,
     private val errorLog: (String?, Throwable?) -> Unit = { _, _ -> },
     private val infoLog: (String) -> Unit = { _ -> },
-    private val debugLog: (String) -> Unit = { _ -> },
+    private val debugLog: (String) -> Unit = { _ -> }
 ) : PixelblazeClient {
-    private val shouldRun = AtomicBoolean(true)
-    private val requestQueue: BlockingQueue<PixelblazeIo<*>> = ArrayBlockingQueue(config.requestQueueDepth)
-    private val awaitingResponse: BlockingQueue<PixelblazeIo<*>> =
-        ArrayBlockingQueue(config.awaitingResponseQueueDepth)
-    private val awaitingResponseQueues: MutableMap<Class<*>, BlockingQueue<PixelblazeIo<*>>> = mutableMapOf()
+    private val machineryRWLock: ReadWriteLock = ReentrantReadWriteLock()
+    private val outboundQueue: BlockingQueue<OutboundMessageWrapper<*>> =
+        ArrayBlockingQueue(config.outboundQueueDepth)
+    private val scheduledMessages: PriorityBlockingQueue<ScheduledMessage<*>> =
+        PriorityBlockingQueue(10) { a, b -> a.runAt.compareTo(b.runAt) }
 
     private val binaryFrames: ArrayDeque<InputStream> = ArrayDeque(config.inboundBufferQueueDepth)
-    private var activeMessageType: BinaryTypeFlag? = null
+    private var activeMessageType: InboundBinary<*>? = null
 
-    private val gson = GsonBuilder().create()
+    internal data class TextParser<Message : InboundMessage>(
+        val id: ParserID,
+        val priority: Int,
+        val type: InboundText<Message>,
+        val parser: (Gson, String) -> Message?
+    )
 
-    private val coroutineScope = CoroutineScope(Dispatchers.IO)
-    private val requestHandler: Job = coroutineScope.async {
-        val client = HttpClient {
-            install(WebSockets)
-        }
-        handleRequests(client)
+    internal data class SerialParser<Message : InboundMessage>(
+        val id: ParserID,
+        val type: InboundBinary<Message>,
+        val parser: (InputStream) -> Message?
+    )
+
+    internal data class OutboundMessageWrapper<Message>(
+        val type: Outbound<Message>,
+        val message: OutboundMessage<*, Message>
+    )
+
+    internal data class ScheduledMessage<Message>(
+        val message: OutboundMessageWrapper<Message>,
+        val runAt: Instant
+    )
+
+    enum class ConnectionStatus {
+        Connected,
+        ScheduledMessageEnqueueFailure,
+        WatchThreadException,
+        ClientDisconnect
     }
 
-    private suspend fun handleRequests(client: HttpClient) {
-        client.webSocket(
-            method = HttpMethod.Get,
-            host = config.address.toString(),
-            port = config.port,
-            path = "/"
-        ) {
-            while (shouldRun.get()) {
-                try {
-                    awaitingResponse.removeIf { io -> io.satisfied || io.inboundFrame is NoResponseManaged }
-                    var ingressed = 0
+    private val coroutineScope = CoroutineScope(Dispatchers.IO)
+    private val connectionHandler: Job = coroutineScope.async {
+        var retry = 1u
+        while (isActive) {
+            try {
+                if (watchConnection(this)) {
+                    retry = 1u
+                } else {
+                    delay(config.sleepStrategyOnDisconnect(retry))
+                    retry++
+                }
+            } catch (t: Throwable) {
+                connectionWatcher(
+                    ConnectionStatus.WatchThreadException,
+                    "Unexpected error from connection handler, reconnecting",
+                    t
+                )
+                delay(config.sleepStrategyOnDisconnect(retry))
+            }
+        }
+    }
 
-                    // There are basically 3 variables at play here, and we have to cover all the combinations:
-                    //  1. The frame type of the received message (BINARY/TEXT)
-                    //  2. Whether the request queue had anyone waiting in it
-                    //  3. If it did, does the message type they're seeking match the received message?
-                    while (ingressed < config.maxInboundMessagesBeforeOutbound) {
-                        incoming.tryReceive().getOrNull()?.run {
-                            val headOfQueue = awaitingResponse.peek()
-                            when (this.frameType) {
-                                FrameType.TEXT -> {
-                                    try {
-                                        gson.fromJson(
-                                            InputStreamReader(ByteArrayInputStream(this.data)),
-                                            JsonObject::class.java
-                                        )
-                                    } catch (e: JsonParseException) {
-                                        errorLog("Couldn't parse message as JSON object", e)
-                                        null
-                                    }?.run {
-                                        if (headOfQueue != null) {
-                                            when (headOfQueue) {
-                                                is JsonResponseIo<*> -> {
-                                                    if (headOfQueue.jsonResponseTypeKey.matches(this)) {
-                                                        headOfQueue.extractAndHandle(this)
-                                                        headOfQueue.satisfied = true
-                                                        awaitingResponse.poll()!! //Discard head, we peeked
-                                                    }
-                                                }
+    private val scheduleHandler: Job = coroutineScope.async {
+        while (isActive) {
+            try {
+                var messageDispatched = false
+                scheduledMessages.peek()?.run {
+                    if (this.runAt.isBefore(Instant.now())) {
+                        if (outboundQueue.offer(
+                                this.message,
+                                config.scheduledTaskDispatchWait.inWholeMilliseconds,
+                                TimeUnit.MILLISECONDS
+                            )
+                        ) {
+                            messageDispatched = true
+                        } else {
+                            connectionWatcher(
+                                ConnectionStatus.ScheduledMessageEnqueueFailure,
+                                "Dispatch of scheduled message failed, queue full",
+                                null
+                            )
+                        }
+                    }
+                }
 
-                                                is BinaryResponseIo<*> -> {}
-                                                is NoResponseIo<*> -> {}
-                                            }
-                                        }
+                if (!messageDispatched) {
+                    delay(100.toDuration(DurationUnit.MILLISECONDS))
+                }
+            } catch (t: Throwable) {
+                errorLog("Unexpected exception in scheduler coroutine", t)
+                delay(1.toDuration(DurationUnit.SECONDS)) //This would be unexpected, don't spam
+            }
+        }
+    }
 
-                                        jsonMessageWatchers.forEach { it.accept(this) }
-                                    }
-                                }
-
-                                FrameType.BINARY -> {
-                                    val frame = this
-                                    this.data.getOrNull(0)?.run {
-                                        BinaryTypeFlag.fromByte(this)
-                                    }?.run {
-                                        val msgType = this
-                                        when (msgType) {
-                                            BinaryTypeFlag.PreviewFrame -> Pair(
-                                                msgType, ByteArrayInputStream(
-                                                    frame.data,
-                                                    1,
-                                                    frame.data.size - 1
-                                                )
-                                            )
-
-                                            else -> {
-                                                frame.data.getOrNull(1)?.run {
-                                                    FramePosition.fromByte(this)
-                                                }?.run {
-                                                    when (this) {
-                                                        FramePosition.First -> {
-                                                            if (binaryFrames.size > 0) {
-                                                                addFrameToBuffer(frame)
-                                                                activeMessageType = msgType
-                                                            } else {
-                                                                errorLog(
-                                                                    "Got 'first' message, but was already buffering",
-                                                                    null
-                                                                )
-                                                                activeMessageType = null
-                                                                binaryFrames.clear()
-                                                            }
-
-                                                            null
-                                                        }
-
-                                                        FramePosition.Middle -> {
-                                                            if (binaryFrames.size > 0) {
-                                                                if (activeMessageType != msgType) {
-                                                                    errorLog("Got middle message with wrong type", null)
-                                                                    activeMessageType = null
-                                                                    binaryFrames.clear()
-                                                                } else if (binaryFrames.size + 1 <= config.inboundBufferQueueDepth) {
-                                                                    addFrameToBuffer(frame)
-                                                                } else {
-                                                                    errorLog("Inbound buffer full", null)
-                                                                    activeMessageType = null
-                                                                    binaryFrames.clear()
-                                                                }
-                                                            } else {
-                                                                errorLog("Got a middle message but no start", null)
-                                                                activeMessageType = null
-                                                                binaryFrames.clear()
-                                                            }
-                                                            null
-                                                        }
-
-                                                        FramePosition.Last -> {
-                                                            if (binaryFrames.size > 0) {
-                                                                if (activeMessageType == msgType) {
-                                                                    activeMessageType = null
-                                                                    val concatStream: InputStream = binaryFrames.fold(
-                                                                        ByteArrayInputStream(ByteArray(0))
-                                                                    ) { acc: InputStream, stream ->
-                                                                        SequenceInputStream(acc, stream)
-                                                                    }
-                                                                    binaryFrames.clear()
-                                                                    Pair(msgType, concatStream)
-                                                                } else {
-                                                                    errorLog("Got last message with wrong type", null)
-                                                                    activeMessageType = null
-                                                                    binaryFrames.clear()
-                                                                    null
-                                                                }
-                                                            } else {
-                                                                errorLog("Got a last message but no start", null)
-                                                                activeMessageType = null
-                                                                binaryFrames.clear()
-                                                                null
-                                                            }
-                                                        }
-
-                                                        FramePosition.Only -> {
-                                                            Pair<BinaryTypeFlag, InputStream>(
-                                                                msgType, ByteArrayInputStream(
-                                                                    frame.data,
-                                                                    2,
-                                                                    frame.data.size - 2
-                                                                )
-                                                            )
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }?.run {
-                                        when (headOfQueue) {
-                                            null -> handleUnrequestedBinary(this.first, this.second)
-                                            is BinaryResponseIo<*> -> {
-                                                if (headOfQueue.binResponseTypeKey.binaryMsgType == this.first) {
-                                                    headOfQueue.handleRaw(this.second)
-                                                    headOfQueue.satisfied = true
-                                                    awaitingResponse.poll()!!
-                                                } else {
-                                                    handleUnrequestedBinary(this.first, this.second)
-                                                }
-                                            }
-
-                                            is JsonResponseIo<*> -> {
-                                                handleUnrequestedBinary(this.first, this.second)
-                                            }
-
-                                            is NoResponseIo<*> -> {}
-                                        }
-                                    }
-                                }
-
-                                FrameType.CLOSE -> TODO()
-                                FrameType.PING -> TODO()
-                                FrameType.PONG -> TODO()
-                            }
-                            if (headOfQueue?.satisfied != true
-                                && headOfQueue.inboundFrame == InboundBinaryFrame(BinaryTypeFlag.ExpanderChannels)
-                            ) {
-                                // Expander channel requests can come in out of order, if that happens we shuffle to
-                                // the back of the request queue and special case handling when we receive an inbound
-                                // expander message. This might cause backwards dispatch if multiple expander requests
-                                // exist at once, but so be it
-                                awaitingResponse.poll()!!
-                                awaitingResponse.offer(headOfQueue)
-                            }
-                            true
-                        } ?: break
-
-                        ingressed++
+    private suspend fun watchConnection(scope: CoroutineScope): Boolean {
+        var unclosed = false
+        httpClient.webSocket(method = HttpMethod.Get, host = address, port = port, path = "/") {
+            while (scope.isActive) {
+                var workDone = false
+                val receiveResult: ChannelResult<Frame> = incoming.tryReceive()
+                if (receiveResult.isClosed) {
+                    if (unclosed) {
+                        connectionWatcher(
+                            ConnectionStatus.ClientDisconnect,
+                            "Client disconnected, will attempt to reconnect",
+                            null
+                        )
+                    }
+                    errorLog("Connection closed, will retry", null)
+                    break
+                } else if (receiveResult.isSuccess) {
+                    if (!unclosed) {
+                        connectionWatcher(
+                            ConnectionStatus.Connected,
+                            "Client received first message on new connection",
+                            null
+                        )
                     }
 
-                    var egressed = 0
-                    var reqHandleFailed = false
-                    while (!reqHandleFailed && egressed < config.maxOutboundMessagesBeforeInbound) {
-                        requestQueue.poll()?.run {
-                            val io = this
-                            when (this.request) {
-                                is OutboundJson<*> -> listOf(this.request.toFrame(gson))
+                    readFrame(receiveResult.getOrThrow())?.run { dispatchInboundFrame(this) }
+                    workDone = true //True even if we discarded the read, don't want to sleep
+                    unclosed = true
+                } else {
+                    // else receiveResult.isFailure => nothing to read but mark conn as healthy
+                    unclosed = true
+                }
 
-                                is BinaryOutbound -> this.request.toFrames(config.outboundFrameSize) ?: run {
-                                    reportFailure(this.failureNotifier, FailureCause.RequestTooLarge)
-                                    listOf()
-                                }
+                outboundQueue.poll()?.run {
+                    sendOutboundMessage(this)
+                    workDone = true
+                }
 
-                                is NoopRequest -> listOf()
-                            }.run {
-                                for (frame in this) {
-                                    try {
-                                        outgoing.send(frame)
-                                    } catch (t: Throwable) {
-                                        reportFailure(
-                                            notifier = io.failureNotifier,
-                                            cause = FailureCause.MessageRejected,
-                                            thrown = t
-                                        )
-                                        reqHandleFailed = true
-                                        break
-                                    }
-                                }
-
-                                if (!reqHandleFailed) {
-                                    if (io.inboundFrame !is NoResponseManaged) {
-                                        if (!awaitingResponse.offer(io)) {
-                                            io.failureNotifier(PixelblazeException(FailureCause.AwaitingResponseQueueFull))
-                                            reqHandleFailed = true
-                                        }
-                                    }
-                                }
-                            }
-                        } ?: break
-                        egressed++
-                    }
-                } catch (t: Throwable) {
-                    errorLog("Unexpected error in main loop", t)
+                if (!workDone) {
+                    delay(config.sleepOnNothingToDo)
                 }
             }
         }
 
-        client.close()
+        return unclosed
     }
 
-    private fun addFrameToBuffer(frame: Frame) {
-        binaryFrames.add(
-            ByteArrayInputStream(
-                frame.data,
-                2,
-                frame.data.size - 2
-            )
-        )
-    }
+    private fun readFrame(frame: Frame): Pair<Inbound<*>, InboundMessage>? {
+        return when (frame.frameType) {
+            FrameType.TEXT -> {
 
-    private fun reportFailure(
-        notifier: FailureNotifier,
-        cause: FailureCause,
-        msg: String = "",
-        thrown: Throwable? = null
-    ) {
-        try {
-            throw PixelblazeException(cause, msg, thrown)
-        } catch (p: PixelblazeException) {
-            notifier(p)
+            }
+
+            FrameType.BINARY -> {
+
+            }
+
+            else -> null
         }
     }
 
-    private fun handleUnrequestedBinary(msgType: BinaryTypeFlag, stream: InputStream) {
-        unhandledBinaryWatchers[msgType]?.run { this.accept(stream) }
+    private fun dispatchInboundFrame(message: Pair<Inbound<*>, InboundMessage>) {
+        TODO()
     }
 
-    private fun handleUnrequestedObject(obj: JsonObject) {
-
-    }
-
-    override fun getPatterns(handler: (ProgramList) -> Unit, onFailure: FailureNotifier) {
-        TODO("Not yet implemented")
-    }
-
-    override fun getPatternsSync(): ProgramList {
-        TODO("Not yet implemented")
-    }
-
-    override fun getPlaylist(handler: (Playlist) -> Unit, playlistName: String, onFailure: FailureNotifier) {
-        TODO("Not yet implemented")
-    }
-
-    override fun getPlaylistSync(playlistName: String): Playlist? {
-        TODO("Not yet implemented")
-    }
-
-    override fun getPlaylistIndex(handler: (Int) -> Unit, onFailure: FailureNotifier) {
-        TODO("Not yet implemented")
-    }
-
-    override fun getPlaylistIndexSync(): Int {
-        TODO("Not yet implemented")
-    }
-
-    override fun setPlaylistIndex(idx: Int) {
-        TODO("Not yet implemented")
-    }
-
-    override fun nextPattern() {
-        TODO("Not yet implemented")
-    }
-
-    override fun prevPattern() {
-        TODO("Not yet implemented")
-    }
-
-    override fun playSequence() {
-        TODO("Not yet implemented")
-    }
-
-    override fun pauseSequence() {
-        TODO("Not yet implemented")
-    }
-
-    override fun setSequencerMode(mode: SequencerMode) {
-        TODO("Not yet implemented")
-    }
-
-    override fun getPeers(handler: (List<Peer>) -> Unit, onFailure: FailureNotifier) {
-        TODO("Not yet implemented")
-    }
-
-    override fun getPeersSync(): List<Peer> {
-        TODO("Not yet implemented")
-    }
-
-    override fun setBrightness(brightness: Float, saveToFlash: Boolean) {
-        TODO("Not yet implemented")
-    }
-
-    override fun setCurrentPatternControl(controlName: String, value: Float, saveToFlash: Float) {
-        TODO("Not yet implemented")
-    }
-
-    override fun setCurrentPatternControls(controls: List<Control>, saveToFlash: Boolean) {
-        TODO("Not yet implemented")
-    }
-
-    override fun getCurrentPatternControls(handler: (List<Control>) -> Unit, onFailure: FailureNotifier) {
-        TODO("Not yet implemented")
-    }
-
-    override fun getCurrentPatternControlsSync(): List<Control> {
-        TODO("Not yet implemented")
-    }
-
-    override fun getPatternControls(patternId: String, handler: (List<Control>) -> Unit, onFailure: FailureNotifier) {
-        TODO("Not yet implemented")
-    }
-
-    override fun getPatternControlsSync(patternId: String): List<Control> {
-        TODO("Not yet implemented")
-    }
-
-    override fun getPreviewImage(patternId: String, handler: (Image) -> Unit, onFailure: FailureNotifier) {
-        TODO("Not yet implemented")
-    }
-
-    override fun getPreviewImageSync(patternId: String): Image {
-        TODO("Not yet implemented")
-    }
-
-    override fun setBrightnessLimit(value: Float, saveToFlash: Boolean) {
-        TODO("Not yet implemented")
-    }
-
-    override fun setPixelCount(pixels: UInt, saveToFlash: Boolean) {
-        TODO("Not yet implemented")
-    }
-
-    override fun getSystemState(
-        settingsHandler: (Settings) -> Unit?,
-        seqHandler: (SequencerState) -> Unit?,
-        expanderHandler: (List<ExpanderChannel>) -> Unit?,
-        onFailure: FailureNotifier
-    ): Boolean {
-        TODO("Not yet implemented")
-    }
-
-    override fun getSettings(settingsHandler: (Settings) -> Unit, onFailure: FailureNotifier) {
-        TODO("Not yet implemented")
-    }
-
-    override fun getSettingsSync(): Settings {
-        TODO("Not yet implemented")
-    }
-
-    override fun getSequencerState(seqHandler: (SequencerState) -> Unit, onFailure: FailureNotifier) {
-        TODO("Not yet implemented")
-    }
-
-    override fun getSequencerStateSync(): SequencerState {
-        TODO("Not yet implemented")
-    }
-
-    override fun getExpanderConfig(expanderHandler: (List<ExpanderChannel>) -> Unit, onFailure: FailureNotifier) {
-        TODO("Not yet implemented")
-    }
-
-    override fun getExpanderConfigSync(): List<ExpanderChannel> {
-        TODO("Not yet implemented")
-    }
-
-    override fun ping(handler: (Duration) -> Unit, onFailure: FailureNotifier) {
-        TODO("Not yet implemented")
-    }
-
-    override fun pingSync(): Duration {
-        TODO("Not yet implemented")
-    }
-
-    override fun sendFramePreviews(sendEm: Boolean) {
-        TODO("Not yet implemented")
-    }
-
-    override fun <Req, Resp> rawJsonRequest(request: Req, requestClass: Class<Req>) {
-        TODO("Not yet implemented")
-    }
-
-    override fun rawBinaryRequest(requestType: BinaryTypeFlag, requestData: ByteArray, canBeSplit: Boolean) {
-        TODO("Not yet implemented")
+    private fun sendOutboundMessage(message: Pair<Outbound<*>, OutboundMessage<*, *>>) {
+        TODO()
     }
 
     override fun close() {
-        shouldRun.set(false)
         runBlocking {
-            requestHandler.join()
+            scheduleHandler.cancel()
+            connectionHandler.cancel()
+            scheduleHandler.join()
+            connectionHandler.join()
         }
     }
 
+    /**
+     *         msgType: InboundJson<ParsedType>,
+    parser: (JsonObject) -> ParsedType?,
+    priority: Int
+     */
     class Builder {
-        private val config: PixelblazeConfig? = null
-        private val jsonMessageWatchers: Map<Class<*>, MutableList<Consumer<InboundMessage>>> = mutableMapOf()
-        private val unhandledBinaryWatchers: Map<BinaryTypeFlag, Consumer<InputStream>> = mutableMapOf()
-        private val errorLog: (String?, Throwable?) -> Unit = { _, _ -> },
-        private val infoLog: (String) -> Unit = { _ -> },
-        private val debugLog: (String) -> Unit = { _ -> },
+        private val watchers: MutableMap<Inbound<InboundMessage>, (InboundMessage) -> Unit> = mutableMapOf()
+        private val textParsers: PriorityBlockingQueue<TextParser<*>> =
+            PriorityBlockingQueue(16) { a, b -> a.priority - b.priority }
+        private val binaryParsers: MutableMap<InboundBinary<*>, SerialParser<*>> = mutableMapOf()
+
+        private var httpClient: HttpClient? = null
+        private var address: URI? = null
+        private var port: Int = 81
+        private var config: PixelblazeConfig = PixelblazeConfig()
+        private var errorLog: (String?, Throwable?) -> Unit = { _, _ -> }
+        private var infoLog: (String) -> Unit = { _ -> }
+        private var debugLog: (String) -> Unit = { _ -> }
+
+        fun build(): WebsocketPixelblazeClient {
+
+        }
     }
 
     companion object {
