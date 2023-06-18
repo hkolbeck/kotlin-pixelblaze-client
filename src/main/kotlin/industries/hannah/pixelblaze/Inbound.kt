@@ -17,6 +17,21 @@ sealed interface Inbound<T : InboundMessage> {
 
 abstract class InboundBinary<T : InboundMessage>(val binaryFlag: Byte) : Inbound<T> {
     override val frameType = FrameType.BINARY
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is InboundBinary<*>) return false
+
+        if (binaryFlag != other.binaryFlag) return false
+        if (frameType != other.frameType) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = binaryFlag.toInt()
+        result = 31 * result + frameType.hashCode()
+        return result
+    }
 }
 
 object InboundPreviewImage : InboundBinary<PreviewImage>(4)
@@ -28,6 +43,21 @@ class InboundRawBinary<T : InboundMessage>(binaryFlag: Byte) : InboundBinary<T>(
 
 abstract class InboundText<T : InboundMessage>(val extractedType: Type) : Inbound<T> {
     override val frameType = FrameType.TEXT
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is InboundText<*>) return false
+
+        if (extractedType != other.extractedType) return false
+        if (frameType != other.frameType) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = extractedType.hashCode()
+        result = 31 * result + frameType.hashCode()
+        return result
+    }
 }
 
 object InboundStats : InboundText<Stats>(Stats::class.java)

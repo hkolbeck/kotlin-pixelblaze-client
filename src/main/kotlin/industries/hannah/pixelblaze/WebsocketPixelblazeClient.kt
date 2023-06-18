@@ -1,6 +1,7 @@
 package industries.hannah.pixelblaze
 
 import com.google.gson.Gson
+import com.google.gson.GsonBuilder
 import io.ktor.client.*
 import io.ktor.client.plugins.websocket.*
 import io.ktor.http.*
@@ -8,23 +9,24 @@ import io.ktor.websocket.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.ChannelResult
 import java.io.InputStream
-import java.net.URI
+import java.io.SequenceInputStream
+import java.lang.reflect.Type
 import java.time.Instant
-import java.util.concurrent.ArrayBlockingQueue
-import java.util.concurrent.BlockingQueue
-import java.util.concurrent.PriorityBlockingQueue
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.locks.ReadWriteLock
-import java.util.concurrent.locks.ReentrantReadWriteLock
+import java.time.temporal.ChronoUnit
+import java.util.*
+import java.util.concurrent.*
+import kotlin.collections.ArrayDeque
+import kotlin.collections.set
+import kotlin.time.Duration
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
 
 class WebsocketPixelblazeClient internal constructor(
     private val address: String,
     private val port: Int,
-    private val watchers: MutableMap<Inbound<InboundMessage>, (InboundMessage) -> Unit>,
+    private val watchers: ConcurrentMap<Inbound<InboundMessage>, (InboundMessage) -> Unit>,
     private val textParsers: PriorityBlockingQueue<TextParser<*>>,
-    private val binaryParsers: MutableMap<InboundBinary<*>, SerialParser<*>>,
+    private val binaryParsers: ConcurrentMap<InboundBinary<*>, SerialParser<*>>,
     private val connectionWatcher: (ConnectionStatus, String?, Throwable?) -> Unit,
     private val config: PixelblazeConfig,
     private val gson: Gson,
@@ -33,7 +35,6 @@ class WebsocketPixelblazeClient internal constructor(
     private val infoLog: (String) -> Unit = { _ -> },
     private val debugLog: (String) -> Unit = { _ -> }
 ) : PixelblazeClient {
-    private val machineryRWLock: ReadWriteLock = ReentrantReadWriteLock()
     private val outboundQueue: BlockingQueue<OutboundMessageWrapper<*>> =
         ArrayBlockingQueue(config.outboundQueueDepth)
     private val scheduledMessages: PriorityBlockingQueue<ScheduledMessage<*>> =
@@ -46,13 +47,13 @@ class WebsocketPixelblazeClient internal constructor(
         val id: ParserID,
         val priority: Int,
         val type: InboundText<Message>,
-        val parser: (Gson, String) -> Message?
+        val parseFn: (Gson, String) -> Message?
     )
 
     internal data class SerialParser<Message : InboundMessage>(
         val id: ParserID,
         val type: InboundBinary<Message>,
-        val parser: (InputStream) -> Message?
+        val parseFn: (InputStream) -> Message?
     )
 
     internal data class OutboundMessageWrapper<Message>(
@@ -61,8 +62,10 @@ class WebsocketPixelblazeClient internal constructor(
     )
 
     internal data class ScheduledMessage<Message>(
+        val scheduleId: ScheduledMessageId,
         val message: OutboundMessageWrapper<Message>,
-        val runAt: Instant
+        val runAt: Instant,
+        val interval: Duration
     )
 
     enum class ConnectionStatus {
@@ -100,6 +103,7 @@ class WebsocketPixelblazeClient internal constructor(
                 var messageDispatched = false
                 scheduledMessages.peek()?.run {
                     if (this.runAt.isBefore(Instant.now())) {
+                        scheduledMessages.poll()!!
                         if (outboundQueue.offer(
                                 this.message,
                                 config.scheduledTaskDispatchWait.inWholeMilliseconds,
@@ -114,6 +118,15 @@ class WebsocketPixelblazeClient internal constructor(
                                 null
                             )
                         }
+
+                        scheduledMessages.put(
+                            ScheduledMessage(
+                                this.scheduleId,
+                                this.message,
+                                this.runAt.plus(this.interval.inWholeMilliseconds, ChronoUnit.MILLIS),
+                                this.interval
+                            )
+                        )
                     }
                 }
 
@@ -175,16 +188,109 @@ class WebsocketPixelblazeClient internal constructor(
     }
 
     private fun readFrame(frame: Frame): Pair<Inbound<*>, InboundMessage>? {
-        return when (frame.frameType) {
-            FrameType.TEXT -> {
-
+        return when (frame) {
+            is Frame.Text -> {
+                for (parser in textParsers) {
+                    val parsed = parser.parseFn(gson, frame.readText())
+                    if (parsed != null) {
+                        return Pair(parser.type, parsed)
+                    }
+                }
+                null
             }
 
-            FrameType.BINARY -> {
-
+            is Frame.Binary -> {
+                readBinaryFrame(frame)?.run {
+                    val message = this
+                    binaryParsers[message.first]?.run {
+                        val parser = this
+                        parser.parseFn(message.second)?.run {
+                            Pair(parser.type, this)
+                        }
+                    }
+                }
             }
 
             else -> null
+        }
+    }
+
+    private fun readBinaryFrame(frame: Frame.Binary): Pair<InboundBinary<*>, InputStream>? {
+        if (frame.data.isEmpty()) {
+            return null
+        } else {
+            val typeFlag = frame.data[0]
+            if (typeFlag >= 0) {
+                if (typeFlag == InboundPreviewFrame.binaryFlag) { //Preview frames are never split
+                    return if (binaryParsers.containsKey(InboundPreviewFrame)) {
+                        Pair(InboundPreviewFrame, frame.readBytes().inputStream(1, frame.data.size))
+                    } else {
+                        null
+                    }
+                } else {
+                    if (!binaryParsers.containsKey(InboundRawBinary<InboundMessage>(typeFlag))) {
+                        return null
+                    }
+
+                    if (frame.data.size >= 2) {
+                        return when (FramePosition.fromByte(frame.data[1])) {
+                            FramePosition.First -> {
+                                if (activeMessageType != null) {
+                                    errorLog("Got new First frame, but we were already reading one", null)
+                                    binaryFrames.clear()
+                                }
+                                activeMessageType = InboundRawBinary<InboundMessage>(typeFlag)
+                                binaryFrames.add(frame.readBytes().inputStream(2, frame.data.size))
+                                null
+                            }
+
+                            FramePosition.Middle -> {
+                                if (activeMessageType?.binaryFlag != typeFlag) {
+                                    binaryFrames.clear()
+                                    activeMessageType = null
+                                } else {
+                                    binaryFrames.add(frame.readBytes().inputStream(2, frame.data.size))
+                                }
+                                null
+                            }
+
+                            FramePosition.Last -> {
+                                if (activeMessageType?.binaryFlag == typeFlag) {
+                                    val stream = frame.readBytes().inputStream(2, frame.data.size)
+                                    val concatStream = SequenceInputStream(
+                                        binaryFrames.fold(ByteArray(0).inputStream() as InputStream) { acc, streamPortion ->
+                                            SequenceInputStream(
+                                                acc,
+                                                streamPortion
+                                            )
+                                        },
+                                        stream
+                                    )
+                                    activeMessageType = null
+                                    binaryFrames.clear()
+                                    Pair(InboundRawBinary<InboundMessage>(typeFlag), concatStream)
+                                } else {
+                                    binaryFrames.clear()
+                                    null
+                                }
+                            }
+
+                            FramePosition.Only -> {
+                                Pair(
+                                    InboundRawBinary<InboundMessage>(typeFlag),
+                                    frame.readBytes().inputStream(2, frame.data.size)
+                                )
+                            }
+
+                            null -> null
+                        }
+                    } else {
+                        return null
+                    }
+                }
+            } else {
+                return null
+            }
         }
     }
 
@@ -192,7 +298,7 @@ class WebsocketPixelblazeClient internal constructor(
         TODO()
     }
 
-    private fun sendOutboundMessage(message: Pair<Outbound<*>, OutboundMessage<*, *>>) {
+    private fun sendOutboundMessage(message: OutboundMessageWrapper<*>) {
         TODO()
     }
 
@@ -205,32 +311,124 @@ class WebsocketPixelblazeClient internal constructor(
         }
     }
 
-    /**
-     *         msgType: InboundJson<ParsedType>,
-    parser: (JsonObject) -> ParsedType?,
-    priority: Int
-     */
     class Builder {
-        private val watchers: MutableMap<Inbound<InboundMessage>, (InboundMessage) -> Unit> = mutableMapOf()
+        private val watchers: ConcurrentMap<Inbound<InboundMessage>, (InboundMessage) -> Unit> = ConcurrentHashMap()
         private val textParsers: PriorityBlockingQueue<TextParser<*>> =
             PriorityBlockingQueue(16) { a, b -> a.priority - b.priority }
-        private val binaryParsers: MutableMap<InboundBinary<*>, SerialParser<*>> = mutableMapOf()
+        private val binaryParsers: ConcurrentMap<InboundBinary<*>, SerialParser<*>> = ConcurrentHashMap()
+        private val gsonBuilder: GsonBuilder = GsonBuilder()
 
         private var httpClient: HttpClient? = null
-        private var address: URI? = null
+        private var address: String? = null
         private var port: Int = 81
         private var config: PixelblazeConfig = PixelblazeConfig()
+        private var connectionWatcher: (ConnectionStatus, String?, Throwable?) -> Unit = { _, _, _ -> }
         private var errorLog: (String?, Throwable?) -> Unit = { _, _ -> }
         private var infoLog: (String) -> Unit = { _ -> }
         private var debugLog: (String) -> Unit = { _ -> }
 
-        fun build(): WebsocketPixelblazeClient {
+        fun <ParsedType : InboundMessage> addWatcher(
+            type: Inbound<ParsedType>,
+            handler: (ParsedType) -> Unit
+        ): Pair<WatcherID, Builder> {
+            val watcherID = UUID.randomUUID()
 
+            return Pair(watcherID, this)
+        }
+
+        fun <Message : InboundMessage> setBinaryParser(
+            type: InboundBinary<Message>,
+            parseFn: (InputStream) -> Message?
+        ): Pair<ParserID, Builder> {
+            val parserID = UUID.randomUUID()
+            binaryParsers[type] = SerialParser(parserID, type, parseFn)
+            return Pair(parserID, this)
+        }
+
+        fun <Message : InboundMessage> addTextParser(
+            priority: Int,
+            type: InboundText<Message>,
+            parseFn: (Gson, String) -> Message?
+        ): Pair<ParserID, Builder> {
+            val parserID = UUID.randomUUID()
+            textParsers.add(TextParser(parserID, priority, type, parseFn))
+            return Pair(parserID, this)
+        }
+
+        fun addGsonAdapter(type: Type, adapter: Any): Builder {
+            gsonBuilder.registerTypeAdapter(type, adapter)
+            return this
+        }
+
+        fun setHttpClient(httpClient: HttpClient): Builder {
+            this.httpClient = httpClient
+            return this
+        }
+
+        fun setAddress(address: String): Builder {
+            this.address = address
+            return this
+        }
+
+        fun setPort(port: Int): Builder {
+            this.port = port
+            return this
+        }
+
+        fun setConfig(config: PixelblazeConfig): Builder {
+            this.config = config
+            return this
+        }
+
+        fun setConnectionWatcher(connectionWatcher: (ConnectionStatus, String?, Throwable?) -> Unit): Builder {
+            this.connectionWatcher = connectionWatcher
+            return this
+        }
+
+        fun setErrorLog(errorLog: (String?, Throwable?) -> Unit): Builder {
+            this.errorLog = errorLog
+            return this
+        }
+
+        fun setInfoLog(infoLog: (String) -> Unit): Builder {
+            this.infoLog = infoLog
+            return this
+        }
+
+        fun setDebugLog(debugLog: (String) -> Unit): Builder {
+            this.debugLog = debugLog
+            return this
+        }
+
+        fun build(): WebsocketPixelblazeClient {
+            val httpClient = httpClient ?: HttpClient {
+                install(WebSockets)
+            }
+
+            return WebsocketPixelblazeClient(
+                watchers = watchers,
+                textParsers = textParsers,
+                binaryParsers = binaryParsers,
+                gson = gsonBuilder.create(),
+                httpClient = httpClient,
+                address = address ?: throw RuntimeException("No address specified"),
+                port = port,
+                config = config,
+                connectionWatcher = connectionWatcher,
+                errorLog = errorLog,
+                infoLog = infoLog,
+                debugLog = debugLog
+            )
         }
     }
 
     companion object {
+
         fun builder(): Builder {
+            return parserlessBuilder()
+        }
+
+        fun parserlessBuilder(): Builder {
             return Builder()
         }
     }

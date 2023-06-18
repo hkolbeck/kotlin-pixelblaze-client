@@ -9,6 +9,7 @@ import java.util.*
 
 typealias WatcherID = UUID
 typealias ParserID = UUID
+typealias ScheduledMessageId = UUID
 
 interface PixelblazeClient : Closeable {
 
