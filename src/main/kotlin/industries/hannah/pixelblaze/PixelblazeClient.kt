@@ -1,11 +1,11 @@
 package industries.hannah.pixelblaze
 
-import com.google.gson.JsonObject
+import com.google.gson.Gson
 import kotlinx.coroutines.channels.Channel
 import java.io.Closeable
 import java.io.InputStream
-import java.time.Duration
 import java.util.*
+import kotlin.time.Duration
 
 typealias WatcherID = UUID
 typealias ParserID = UUID
@@ -13,26 +13,28 @@ typealias ScheduledMessageId = UUID
 
 interface PixelblazeClient : Closeable {
 
-    ////// Write
-    fun <Out, Wrapper : OutboundMessage<*, Out>> issueOutbound(type: Outbound<Out>, msg: Wrapper): Boolean
+    fun <Out, Wrapper : OutboundMessage<*, Out>> issueOutbound(type: Outbound<Wrapper>, msg: Wrapper): Boolean
 
     suspend fun <Out, Wrapper : OutboundMessage<*, Out>, Resp : InboundMessage> issueOutboundAndWait(
-        type: Outbound<Out>,
+        outboundType: Outbound<Wrapper>,
         msg: Wrapper,
         inboundType: Inbound<Resp>,
         maxWait: Duration
     ): Resp?
 
-    suspend fun <Out, Wrapper : OutboundMessage<*, Out>> repeatOutbound(
-        type: Outbound<Out>,
-        msg: Wrapper,
-        interval: Duration
-    )
+    fun <Out, Wrapper : OutboundMessage<*, Out>> repeatOutbound(
+        type: Outbound<Wrapper>,
+        msgGenerator: () -> Wrapper,
+        interval: Duration,
+        initialDelay: Duration = interval
+    ): ScheduledMessageId
 
-    fun <T, Out> saveAfter(wrapperBuilder: (T, Boolean) -> OutboundMessage<*, Out>, saveAfter: Duration): Channel<T>
+    fun cancelRepeatedOutbound(id: ScheduledMessageId): Boolean
 
-
-    /////// Read
+    fun <T, Out, Wrapper : OutboundMessage<*, Out>> saveAfter(
+        wrapperBuilder: (T, Boolean) -> Wrapper,
+        saveAfter: Duration
+    ): Channel<T>
 
     fun <ParsedType : InboundMessage> addWatcher(
         type: Inbound<ParsedType>,
@@ -42,21 +44,18 @@ interface PixelblazeClient : Closeable {
     fun removeWatcher(id: WatcherID): Boolean
 
 
-    fun <ParsedType : InboundMessage> addJsonParser(
+    fun <ParsedType : InboundMessage> addTextParser(
         msgType: InboundText<ParsedType>,
-        parser: (JsonObject) -> ParsedType?,
+        parserFn: (Gson, String) -> ParsedType?,
         priority: Int
     ): ParserID
 
     fun <ParsedType : InboundMessage> setBinaryParser(
         msgType: InboundBinary<ParsedType>,
-        parser: (InputStream) -> ParsedType?
+        parserFn: (InputStream) -> ParsedType?
     ): ParserID
 
     fun removeParser(id: ParserID): Boolean
-    fun removeBinaryParser(msgType: InboundBinary<*>): ParserID?
-
-    ///// Write TODO
 
     companion object {
         const val DEFAULT_PLAYLIST = "_defaultplaylist_"

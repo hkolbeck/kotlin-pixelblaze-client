@@ -7,6 +7,7 @@ import io.ktor.client.plugins.websocket.*
 import io.ktor.http.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ChannelResult
 import java.io.InputStream
 import java.io.SequenceInputStream
@@ -17,14 +18,17 @@ import java.util.*
 import java.util.concurrent.*
 import kotlin.collections.ArrayDeque
 import kotlin.collections.set
+import kotlin.coroutines.Continuation
+import kotlin.coroutines.resume
 import kotlin.time.Duration
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
+import kotlin.time.toJavaDuration
 
 class WebsocketPixelblazeClient internal constructor(
     private val address: String,
     private val port: Int,
-    private val watchers: ConcurrentMap<Inbound<InboundMessage>, (InboundMessage) -> Unit>,
+    private val watchers: ConcurrentMap<Inbound<InboundMessage>, ConcurrentLinkedQueue<Watcher<InboundMessage>>>,
     private val textParsers: PriorityBlockingQueue<TextParser<*>>,
     private val binaryParsers: ConcurrentMap<InboundBinary<*>, SerialParser<*>>,
     private val connectionWatcher: (ConnectionStatus, String?, Throwable?) -> Unit,
@@ -58,14 +62,20 @@ class WebsocketPixelblazeClient internal constructor(
 
     internal data class OutboundMessageWrapper<Message>(
         val type: Outbound<Message>,
-        val message: OutboundMessage<*, Message>
+        val message: Message
     )
 
     internal data class ScheduledMessage<Message>(
+        val type: Outbound<Message>,
+        val messageGenerator: () -> Message,
         val scheduleId: ScheduledMessageId,
-        val message: OutboundMessageWrapper<Message>,
         val runAt: Instant,
         val interval: Duration
+    )
+
+    internal data class Watcher<Message : InboundMessage>(
+        val id: WatcherID,
+        val handlerFn: (Message) -> Unit,
     )
 
     enum class ConnectionStatus {
@@ -105,7 +115,7 @@ class WebsocketPixelblazeClient internal constructor(
                     if (this.runAt.isBefore(Instant.now())) {
                         scheduledMessages.poll()!!
                         if (outboundQueue.offer(
-                                this.message,
+                                OutboundMessageWrapper(this.type as Outbound<Any>, this.messageGenerator() as Any),
                                 config.scheduledTaskDispatchWait.inWholeMilliseconds,
                                 TimeUnit.MILLISECONDS
                             )
@@ -121,8 +131,9 @@ class WebsocketPixelblazeClient internal constructor(
 
                         scheduledMessages.put(
                             ScheduledMessage(
+                                this.type,
+                                this.messageGenerator as () -> Any,
                                 this.scheduleId,
-                                this.message,
                                 this.runAt.plus(this.interval.inWholeMilliseconds, ChronoUnit.MILLIS),
                                 this.interval
                             )
@@ -138,6 +149,114 @@ class WebsocketPixelblazeClient internal constructor(
                 delay(1.toDuration(DurationUnit.SECONDS)) //This would be unexpected, don't spam
             }
         }
+    }
+
+    override fun <Out, Wrapper : OutboundMessage<*, Out>> issueOutbound(
+        type: Outbound<Wrapper>,
+        msg: Wrapper
+    ): Boolean {
+        return outboundQueue.offer(OutboundMessageWrapper(type, msg))
+    }
+
+    override suspend fun <Out, Wrapper : OutboundMessage<*, Out>, Resp : InboundMessage> issueOutboundAndWait(
+        outboundType: Outbound<Wrapper>,
+        msg: Wrapper,
+        inboundType: Inbound<Resp>,
+        maxWait: Duration
+    ): Resp? {
+        return suspendCoroutineWithTimeout(maxWait) { continuation ->
+            var id: WatcherID? = null
+            val watchFn: (Resp) -> Unit = { resp: Resp ->
+                continuation.resume(resp)
+                removeWatcher(id!!)
+            }
+
+            id = addWatcher(inboundType, watchFn)
+            issueOutbound(outboundType, msg)
+        }
+    }
+
+    private suspend inline fun <T> suspendCoroutineWithTimeout(
+        timeout: Duration,
+        crossinline block: (Continuation<T>) -> Unit
+    ) = withTimeout(timeout) {
+        suspendCancellableCoroutine(block = block)
+    }
+
+    override fun <Out, Wrapper : OutboundMessage<*, Out>> repeatOutbound(
+        type: Outbound<Wrapper>,
+        msgGenerator: () -> Wrapper,
+        interval: Duration,
+        initialDelay: Duration
+    ): ScheduledMessageId {
+        val scheduleId = UUID.randomUUID()
+        scheduledMessages.add(
+            ScheduledMessage(
+                type,
+                msgGenerator,
+                scheduleId,
+                Instant.now().plus(initialDelay.toJavaDuration()),
+                interval
+            )
+        )
+
+        return scheduleId
+    }
+
+    override fun cancelRepeatedOutbound(id: ScheduledMessageId): Boolean {
+        return scheduledMessages.removeIf { msg -> msg.scheduleId == id }
+    }
+
+    override fun <T, Out, Message : OutboundMessage<*, Out>> saveAfter(
+        wrapperBuilder: (T, Boolean) -> Message,
+        saveAfter: Duration
+    ): Channel<T> {
+        TODO("Not yet implemented")
+    }
+
+    override fun <ParsedType : InboundMessage> addWatcher(
+        type: Inbound<ParsedType>,
+        handler: (ParsedType) -> Unit
+    ): WatcherID {
+        val watcherID = UUID.randomUUID()
+        watchers.putIfAbsent(type as Inbound<InboundMessage>, ConcurrentLinkedQueue())
+        watchers[type]!!.add(Watcher(watcherID, handler as (InboundMessage) -> Unit))
+        return watcherID
+    }
+
+    override fun removeWatcher(id: WatcherID): Boolean {
+        return watchers.any { (_, list) -> list.removeIf { watcher -> watcher.id == id } }
+    }
+
+    override fun <ParsedType : InboundMessage> addTextParser(
+        msgType: InboundText<ParsedType>,
+        parserFn: (Gson, String) -> ParsedType?,
+        priority: Int
+    ): ParserID {
+        val id = UUID.randomUUID()
+        textParsers.add(TextParser(id, priority, msgType, parserFn))
+        return id
+    }
+
+    override fun <ParsedType : InboundMessage> setBinaryParser(
+        msgType: InboundBinary<ParsedType>,
+        parserFn: (InputStream) -> ParsedType?
+    ): ParserID {
+        val id = UUID.randomUUID()
+        binaryParsers[msgType] = SerialParser(id, msgType, parserFn)
+        return id
+    }
+
+    override fun removeParser(id: ParserID): Boolean {
+        var found = false
+        binaryParsers.filterValues { parser -> parser.id == id }.forEach { parser ->
+            found = true
+            binaryParsers.remove(parser.key)
+        }
+
+        found = found || textParsers.removeIf { parser -> parser.id == id }
+
+        return found
     }
 
     private suspend fun watchConnection(scope: CoroutineScope): Boolean {
@@ -312,7 +431,8 @@ class WebsocketPixelblazeClient internal constructor(
     }
 
     class Builder {
-        private val watchers: ConcurrentMap<Inbound<InboundMessage>, (InboundMessage) -> Unit> = ConcurrentHashMap()
+        private val watchers: ConcurrentMap<Inbound<InboundMessage>, ConcurrentLinkedQueue<Watcher<InboundMessage>>> =
+            ConcurrentHashMap()
         private val textParsers: PriorityBlockingQueue<TextParser<*>> =
             PriorityBlockingQueue(16) { a, b -> a.priority - b.priority }
         private val binaryParsers: ConcurrentMap<InboundBinary<*>, SerialParser<*>> = ConcurrentHashMap()
@@ -332,7 +452,8 @@ class WebsocketPixelblazeClient internal constructor(
             handler: (ParsedType) -> Unit
         ): Pair<WatcherID, Builder> {
             val watcherID = UUID.randomUUID()
-
+            watchers.putIfAbsent(type as Inbound<InboundMessage>, ConcurrentLinkedQueue())
+            watchers[type]!!.add(Watcher(watcherID, handler as (InboundMessage) -> Unit))
             return Pair(watcherID, this)
         }
 
@@ -425,6 +546,26 @@ class WebsocketPixelblazeClient internal constructor(
     companion object {
 
         fun builder(): Builder {
+            //private val STD_JSON_PARSERS = listOf<(JsonObject) -> InboundMessage?>(
+//    Stats::fromJson,
+//    SequencerState::fromJson,
+//    Settings::fromJson,
+//    PeerInboundMessage::fromJson,
+//
+//    //PlaylistUpdate has a subset of Playlist's fields, important to check Playlist first
+//    Playlist::fromJson,
+//    PlaylistUpdate::fromJson,
+//    Ack::fromJson
+//)
+//
+//private val STD_BINARY_PARSERS = mapOf<BinaryTypeFlag, (InputStream) -> InboundMessage?>(
+//    Pair(BinaryTypeFlag.ExpanderChannels, ExpanderChannels::fromBinary),
+//    Pair(BinaryTypeFlag.PreviewImage, PreviewImage::fromBinary),
+//    Pair(BinaryTypeFlag.PreviewFrame, PreviewFrame::fromBinary),
+//    Pair(BinaryTypeFlag.GetProgramList, ProgramList::fromBinary)
+//);
+
+
             return parserlessBuilder()
         }
 
