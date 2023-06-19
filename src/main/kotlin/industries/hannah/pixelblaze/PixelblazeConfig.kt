@@ -8,6 +8,7 @@ class PixelblazeConfig(
     requestQueueDepth: UInt = 50u,
     inboundBufferQueueDepth: UInt = 10u,
     outboundFrameSize: UInt = 1024u,
+    saveAfterWriteBufferSize: UInt = 10u,
     val scheduledTaskDispatchWait: Duration = 1.toDuration(DurationUnit.SECONDS),
     val sleepOnNothingToDo: Duration = 10.toDuration(DurationUnit.MILLISECONDS),
     val sleepStrategyOnDisconnect: (UInt) -> Duration =
@@ -16,4 +17,5 @@ class PixelblazeConfig(
     val inboundBufferQueueDepth: Int = inboundBufferQueueDepth.toInt()
     val outboundQueueDepth: Int = requestQueueDepth.toInt()
     val outboundFrameSize: Int = outboundFrameSize.toInt()
+    val saveAfterWriteBufferSize: Int = saveAfterWriteBufferSize.toInt()
 }

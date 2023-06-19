@@ -9,6 +9,7 @@ import io.ktor.websocket.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ChannelResult
+import kotlinx.coroutines.channels.SendChannel
 import java.io.InputStream
 import java.io.SequenceInputStream
 import java.lang.reflect.Type
@@ -31,7 +32,7 @@ class WebsocketPixelblazeClient internal constructor(
     private val watchers: ConcurrentMap<Inbound<InboundMessage>, ConcurrentLinkedQueue<Watcher<InboundMessage>>>,
     private val textParsers: PriorityBlockingQueue<TextParser<*>>,
     private val binaryParsers: ConcurrentMap<InboundBinary<*>, SerialParser<*>>,
-    private val connectionWatcher: (ConnectionStatus, String?, Throwable?) -> Unit,
+    private val connectionWatcher: (ConnectionEvent, String?, Throwable?) -> Unit,
     private val config: PixelblazeConfig,
     private val gson: Gson,
     private val httpClient: HttpClient,
@@ -78,13 +79,6 @@ class WebsocketPixelblazeClient internal constructor(
         val handlerFn: (Message) -> Unit,
     )
 
-    enum class ConnectionStatus {
-        Connected,
-        ScheduledMessageEnqueueFailure,
-        WatchThreadException,
-        ClientDisconnect
-    }
-
     private val coroutineScope = CoroutineScope(Dispatchers.IO)
     private val connectionHandler: Job = coroutineScope.async {
         var retry = 1u
@@ -98,7 +92,7 @@ class WebsocketPixelblazeClient internal constructor(
                 }
             } catch (t: Throwable) {
                 connectionWatcher(
-                    ConnectionStatus.WatchThreadException,
+                    ConnectionEvent.WatchThreadException,
                     "Unexpected error from connection handler, reconnecting",
                     t
                 )
@@ -123,7 +117,7 @@ class WebsocketPixelblazeClient internal constructor(
                             messageDispatched = true
                         } else {
                             connectionWatcher(
-                                ConnectionStatus.ScheduledMessageEnqueueFailure,
+                                ConnectionEvent.ScheduledMessageEnqueueFailure,
                                 "Dispatch of scheduled message failed, queue full",
                                 null
                             )
@@ -207,11 +201,46 @@ class WebsocketPixelblazeClient internal constructor(
         return scheduledMessages.removeIf { msg -> msg.scheduleId == id }
     }
 
-    override fun <T, Out, Message : OutboundMessage<*, Out>> saveAfter(
-        wrapperBuilder: (T, Boolean) -> Message,
+    override fun <T, Out, Wrapper : OutboundMessage<*, Out>> saveAfter(
+        type: Outbound<Wrapper>,
+        wrapperBuilder: (T, Boolean) -> Wrapper,
         saveAfter: Duration
-    ): Channel<T> {
-        TODO("Not yet implemented")
+    ): SendChannel<T> {
+        val channel = Channel<T>(config.saveAfterWriteBufferSize)
+        coroutineScope.async {
+            var last: T? = null
+            var lastSaved: T? = null
+
+
+            while (!channel.isClosedForReceive) {
+                withTimeoutOrNull(saveAfter) {
+                    val receiveResult = channel.receiveCatching()
+                    if (receiveResult.isSuccess) {
+                        receiveResult.getOrThrow()
+                    } else {
+                        // If the channel was closed or the read timed out, either way we want to dispatch
+                        // a save request with the last value, returning null here should do that
+                        null
+                    }
+                }?.run {
+                    last = this
+                    val message = wrapperBuilder(this, false)
+                    if (!issueOutbound(type, message)) {
+                        errorLog("Enqueue of non-save request failed for saveAfter()", null)
+                    }
+                } ?: run {
+                    if (last != null && last != lastSaved) {
+                        lastSaved = last
+                        val message = wrapperBuilder(last!!, true)
+                        if (!issueOutbound(type, message)) {
+                            errorLog("Enqueue of save request failed for saveAfter()", null)
+                        }
+                    }
+                }
+            }
+        }
+
+        return channel
     }
 
     override fun <ParsedType : InboundMessage> addWatcher(
@@ -268,7 +297,7 @@ class WebsocketPixelblazeClient internal constructor(
                 if (receiveResult.isClosed) {
                     if (unclosed) {
                         connectionWatcher(
-                            ConnectionStatus.ClientDisconnect,
+                            ConnectionEvent.ClientDisconnect,
                             "Client disconnected, will attempt to reconnect",
                             null
                         )
@@ -278,13 +307,23 @@ class WebsocketPixelblazeClient internal constructor(
                 } else if (receiveResult.isSuccess) {
                     if (!unclosed) {
                         connectionWatcher(
-                            ConnectionStatus.Connected,
+                            ConnectionEvent.Connected,
                             "Client received first message on new connection",
                             null
                         )
                     }
 
-                    readFrame(receiveResult.getOrThrow())?.run { dispatchInboundFrame(this) }
+                    readFrame(receiveResult.getOrThrow())?.run {
+                        watchers[this.first]?.forEach { watcher ->
+                            try {
+                                watcher.handlerFn(this.second)
+                            } catch (t: Throwable) {
+                                val msg = "Exception in watcher. Type ${this.first.javaClass}, id: ${watcher.id}"
+                                connectionWatcher(ConnectionEvent.WatcherFailed, msg, t)
+                            }
+                        }
+                    }
+
                     workDone = true //True even if we discarded the read, don't want to sleep
                     unclosed = true
                 } else {
@@ -293,7 +332,7 @@ class WebsocketPixelblazeClient internal constructor(
                 }
 
                 outboundQueue.poll()?.run {
-                    sendOutboundMessage(this)
+                    sendOutboundMessage(this as OutboundMessageWrapper<OutboundMessage<Any, *>>, outgoing)
                     workDone = true
                 }
 
@@ -413,12 +452,23 @@ class WebsocketPixelblazeClient internal constructor(
         }
     }
 
-    private fun dispatchInboundFrame(message: Pair<Inbound<*>, InboundMessage>) {
-        TODO()
-    }
+    private suspend fun sendOutboundMessage(
+        message: OutboundMessageWrapper<OutboundMessage<Any, *>>,
+        outgoing: SendChannel<Frame>
+    ) {
+        val context: Any = when (message.type) {
+            is OutboundJson<*> -> gson
+            is OutboundBinary<*> -> BinarySerializationContext(
+                config.outboundFrameSize,
+                message.type.binaryFlag,
+                message.type.canBeSplit
+            )
+        }
 
-    private fun sendOutboundMessage(message: OutboundMessageWrapper<*>) {
-        TODO()
+        val frames = message.message.toFrames(context) ?: return
+        for (frame in frames) {
+            outgoing.send(frame)
+        }
     }
 
     override fun close() {
@@ -442,7 +492,7 @@ class WebsocketPixelblazeClient internal constructor(
         private var address: String? = null
         private var port: Int = 81
         private var config: PixelblazeConfig = PixelblazeConfig()
-        private var connectionWatcher: (ConnectionStatus, String?, Throwable?) -> Unit = { _, _, _ -> }
+        private var connectionWatcher: (ConnectionEvent, String?, Throwable?) -> Unit = { _, _, _ -> }
         private var errorLog: (String?, Throwable?) -> Unit = { _, _ -> }
         private var infoLog: (String) -> Unit = { _ -> }
         private var debugLog: (String) -> Unit = { _ -> }
@@ -501,7 +551,7 @@ class WebsocketPixelblazeClient internal constructor(
             return this
         }
 
-        fun setConnectionWatcher(connectionWatcher: (ConnectionStatus, String?, Throwable?) -> Unit): Builder {
+        fun setConnectionWatcher(connectionWatcher: (ConnectionEvent, String?, Throwable?) -> Unit): Builder {
             this.connectionWatcher = connectionWatcher
             return this
         }
@@ -546,27 +596,18 @@ class WebsocketPixelblazeClient internal constructor(
     companion object {
 
         fun builder(): Builder {
-            //private val STD_JSON_PARSERS = listOf<(JsonObject) -> InboundMessage?>(
-//    Stats::fromJson,
-//    SequencerState::fromJson,
-//    Settings::fromJson,
-//    PeerInboundMessage::fromJson,
-//
-//    //PlaylistUpdate has a subset of Playlist's fields, important to check Playlist first
-//    Playlist::fromJson,
-//    PlaylistUpdate::fromJson,
-//    Ack::fromJson
-//)
-//
-//private val STD_BINARY_PARSERS = mapOf<BinaryTypeFlag, (InputStream) -> InboundMessage?>(
-//    Pair(BinaryTypeFlag.ExpanderChannels, ExpanderChannels::fromBinary),
-//    Pair(BinaryTypeFlag.PreviewImage, PreviewImage::fromBinary),
-//    Pair(BinaryTypeFlag.PreviewFrame, PreviewFrame::fromBinary),
-//    Pair(BinaryTypeFlag.GetProgramList, ProgramList::fromBinary)
-//);
-
-
             return parserlessBuilder()
+                .setBinaryParser(InboundPreviewImage, PreviewImage::fromBinary).second
+                .setBinaryParser(InboundPreviewFrame, PreviewFrame::fromBinary).second
+                .setBinaryParser(InboundProgramList, ProgramList::fromBinary).second
+                .setBinaryParser(InboundExpanderChannels, ExpanderChannels::fromBinary).second
+                .addTextParser(1000, InboundStats, Stats::fromText).second
+                .addTextParser(2000, InboundSequencerState, SequencerState::fromText).second
+                .addTextParser(3000, InboundSettings, Settings::fromText).second
+                .addTextParser(4000, InboundPeers, Peers::fromText).second
+                .addTextParser(5000, InboundPlayist, Playlist::fromText).second
+                .addTextParser(6000, InboundPlaylistUpdate, PlaylistUpdate::fromText).second
+                .addTextParser(7000, InboundAck, Ack::fromText).second
         }
 
         fun parserlessBuilder(): Builder {

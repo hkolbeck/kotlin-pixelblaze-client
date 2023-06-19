@@ -62,9 +62,11 @@ abstract class InboundText<T : InboundMessage>(val extractedType: Type) : Inboun
 
 object InboundStats : InboundText<Stats>(Stats::class.java)
 object InboundSequencerState : InboundText<SequencerState>(SequencerState::class.java)
-object InboundPeers : InboundText<PeerInboundMessage>(PeerInboundMessage::class.java)
+object InboundSettings : InboundText<Settings>(Settings::class.java)
+object InboundPeers : InboundText<Peers>(Peers::class.java)
 object InboundPlayist : InboundText<Playlist>(Playlist::class.java)
 object InboundPlaylistUpdate : InboundText<PlaylistUpdate>(PlaylistUpdate::class.java)
+object InboundAck : InboundText<Ack>(Ack::class.java)
 class InboundParsedText<T : InboundMessage>(extractedType: Type) : InboundText<T>(extractedType)
 
 sealed class InboundMessage
@@ -259,11 +261,11 @@ data class Peer(
     val followerCount: UInt,
 )
 
-data class PeerInboundMessage(
+data class Peers(
     val peers: List<Peer>
 ) : InboundMessage() {
     companion object {
-        fun fromText(gson: Gson, string: String): PeerInboundMessage? {
+        fun fromText(gson: Gson, string: String): Peers? {
             val json = gson.fromJson(string, JsonObject::class.java)
 
             if (!json.has("peers")) {
@@ -284,7 +286,7 @@ data class PeerInboundMessage(
                 )
             }
 
-            return PeerInboundMessage(parsed)
+            return Peers(parsed)
         }
     }
 }

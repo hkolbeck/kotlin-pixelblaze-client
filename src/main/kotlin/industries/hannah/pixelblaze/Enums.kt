@@ -1,5 +1,13 @@
 package industries.hannah.pixelblaze
 
+enum class ConnectionEvent {
+    Connected,
+    ScheduledMessageEnqueueFailure,
+    WatchThreadException,
+    WatcherFailed,
+    ClientDisconnect,
+}
+
 enum class BinaryTypeFlag(val typeVal: Byte) {
     PutSource(1),
     PutByteCode(3),

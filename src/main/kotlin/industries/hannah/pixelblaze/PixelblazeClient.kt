@@ -1,7 +1,7 @@
 package industries.hannah.pixelblaze
 
 import com.google.gson.Gson
-import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.SendChannel
 import java.io.Closeable
 import java.io.InputStream
 import java.util.*
@@ -32,9 +32,10 @@ interface PixelblazeClient : Closeable {
     fun cancelRepeatedOutbound(id: ScheduledMessageId): Boolean
 
     fun <T, Out, Wrapper : OutboundMessage<*, Out>> saveAfter(
+        type: Outbound<Wrapper>,
         wrapperBuilder: (T, Boolean) -> Wrapper,
         saveAfter: Duration
-    ): Channel<T>
+    ): SendChannel<T>
 
     fun <ParsedType : InboundMessage> addWatcher(
         type: Inbound<ParsedType>,
