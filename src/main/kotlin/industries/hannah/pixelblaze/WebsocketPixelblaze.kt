@@ -14,7 +14,6 @@ import java.io.InputStream
 import java.io.SequenceInputStream
 import java.lang.reflect.Type
 import java.time.Instant
-import java.time.temporal.ChronoUnit
 import java.util.*
 import java.util.concurrent.*
 import kotlin.collections.ArrayDeque
@@ -22,11 +21,11 @@ import kotlin.collections.set
 import kotlin.coroutines.Continuation
 import kotlin.coroutines.resume
 import kotlin.time.Duration
-import kotlin.time.DurationUnit
-import kotlin.time.toDuration
 import kotlin.time.toJavaDuration
 
-class WebsocketPixelblazeClient internal constructor(
+internal typealias SaveAfterID = UUID
+
+class WebsocketPixelblaze internal constructor(
     private val address: String,
     private val port: Int,
     private val watchers: ConcurrentMap<Inbound<InboundMessage>, ConcurrentLinkedQueue<Watcher<InboundMessage>>>,
@@ -36,14 +35,21 @@ class WebsocketPixelblazeClient internal constructor(
     private val config: PixelblazeConfig,
     private val gson: Gson,
     private val httpClient: HttpClient,
-    private val errorLog: (String?, Throwable?) -> Unit = { _, _ -> },
-    private val infoLog: (String) -> Unit = { _ -> },
-    private val debugLog: (String) -> Unit = { _ -> }
-) : PixelblazeClient {
+    private val errorLog: (String?, Throwable?) -> Unit,
+    private val infoLog: (String) -> Unit,
+    private val debugLog: (String) -> Unit,
+    ioLoopDispatcher: CoroutineDispatcher,
+    saveAfterDispatcher: CoroutineDispatcher,
+    cronDispatcher: CoroutineDispatcher
+) : Pixelblaze {
     private val outboundQueue: BlockingQueue<OutboundMessageWrapper<*>> =
         ArrayBlockingQueue(config.outboundQueueDepth)
-    private val scheduledMessages: PriorityBlockingQueue<ScheduledMessage<*>> =
-        PriorityBlockingQueue(10) { a, b -> a.runAt.compareTo(b.runAt) }
+    private val saveAfterJobs: ConcurrentMap<SaveAfterID, Job> = ConcurrentHashMap()
+    private val cronMessages: ConcurrentMap<ScheduledMessageId, Job> = ConcurrentHashMap()
+
+    private val ioLoopDispatcher = CoroutineScope(ioLoopDispatcher)
+    private val saveAfterDispatcher = CoroutineScope(saveAfterDispatcher)
+    private val cronDispatcher = CoroutineScope(cronDispatcher)
 
     private val binaryFrames: ArrayDeque<InputStream> = ArrayDeque(config.inboundBufferQueueDepth)
     private var activeMessageType: InboundBinary<*>? = null
@@ -79,8 +85,8 @@ class WebsocketPixelblazeClient internal constructor(
         val handlerFn: (Message) -> Unit,
     )
 
-    private val coroutineScope = CoroutineScope(Dispatchers.IO)
-    private val connectionHandler: Job = coroutineScope.async {
+    private val smallTaskCoroutines = CoroutineScope(Dispatchers.Default)
+    private val connectionHandler: Job = CoroutineScope(Dispatchers.IO).async {
         var retry = 1u
         while (isActive) {
             try {
@@ -97,50 +103,6 @@ class WebsocketPixelblazeClient internal constructor(
                     t
                 )
                 delay(config.sleepStrategyOnDisconnect(retry))
-            }
-        }
-    }
-
-    private val scheduleHandler: Job = coroutineScope.async {
-        while (isActive) {
-            try {
-                var messageDispatched = false
-                scheduledMessages.peek()?.run {
-                    if (this.runAt.isBefore(Instant.now())) {
-                        scheduledMessages.poll()!!
-                        if (outboundQueue.offer(
-                                OutboundMessageWrapper(this.type as Outbound<Any>, this.messageGenerator() as Any),
-                                config.scheduledTaskDispatchWait.inWholeMilliseconds,
-                                TimeUnit.MILLISECONDS
-                            )
-                        ) {
-                            messageDispatched = true
-                        } else {
-                            connectionWatcher(
-                                ConnectionEvent.ScheduledMessageEnqueueFailure,
-                                "Dispatch of scheduled message failed, queue full",
-                                null
-                            )
-                        }
-
-                        scheduledMessages.put(
-                            ScheduledMessage(
-                                this.type,
-                                this.messageGenerator as () -> Any,
-                                this.scheduleId,
-                                this.runAt.plus(this.interval.inWholeMilliseconds, ChronoUnit.MILLIS),
-                                this.interval
-                            )
-                        )
-                    }
-                }
-
-                if (!messageDispatched) {
-                    delay(100.toDuration(DurationUnit.MILLISECONDS))
-                }
-            } catch (t: Throwable) {
-                errorLog("Unexpected exception in scheduler coroutine", t)
-                delay(1.toDuration(DurationUnit.SECONDS)) //This would be unexpected, don't spam
             }
         }
     }
@@ -184,21 +146,21 @@ class WebsocketPixelblazeClient internal constructor(
         initialDelay: Duration
     ): ScheduledMessageId {
         val scheduleId = UUID.randomUUID()
-        scheduledMessages.add(
-            ScheduledMessage(
-                type,
-                msgGenerator,
-                scheduleId,
-                Instant.now().plus(initialDelay.toJavaDuration()),
-                interval
-            )
-        )
+
+        cronMessages[scheduleId] = smallTaskCoroutines.async {
+            delay(initialDelay)
+            while (isActive) {
+                issueOutbound(type, msgGenerator())
+                delay(interval)
+            }
+        }
 
         return scheduleId
     }
 
     override fun cancelRepeatedOutbound(id: ScheduledMessageId): Boolean {
-        return scheduledMessages.removeIf { msg -> msg.scheduleId == id }
+        cronMessages.remove(id)?.cancel() ?: return false
+        return true
     }
 
     override fun <T, Out, Wrapper : OutboundMessage<*, Out>> saveAfter(
@@ -206,38 +168,61 @@ class WebsocketPixelblazeClient internal constructor(
         wrapperBuilder: (T, Boolean) -> Wrapper,
         saveAfter: Duration
     ): SendChannel<T> {
+        val jobId = UUID.randomUUID()
         val channel = Channel<T>(config.saveAfterWriteBufferSize)
-        coroutineScope.async {
+        saveAfterJobs[jobId] = smallTaskCoroutines.async {
             var last: T? = null
             var lastSaved: T? = null
+            var lastSaveAt: Instant? = null
 
+            try {
+                while (isActive && !channel.isClosedForReceive) {
+                    withTimeoutOrNull(saveAfter) {
+                        val receiveResult = channel.receiveCatching()
+                        if (receiveResult.isSuccess) {
+                            receiveResult.getOrThrow()
+                        } else {
+                            // If the channel was closed or the read timed out, either way we want to dispatch
+                            // a save request with the last value, returning null here should do that
+                            null
+                        }
+                    }?.run {
+                        last = this
 
-            while (!channel.isClosedForReceive) {
-                withTimeoutOrNull(saveAfter) {
-                    val receiveResult = channel.receiveCatching()
-                    if (receiveResult.isSuccess) {
-                        receiveResult.getOrThrow()
-                    } else {
-                        // If the channel was closed or the read timed out, either way we want to dispatch
-                        // a save request with the last value, returning null here should do that
-                        null
-                    }
-                }?.run {
-                    last = this
-                    val message = wrapperBuilder(this, false)
-                    if (!issueOutbound(type, message)) {
-                        errorLog("Enqueue of non-save request failed for saveAfter()", null)
-                    }
-                } ?: run {
-                    if (last != null && last != lastSaved) {
-                        lastSaved = last
-                        val message = wrapperBuilder(last!!, true)
+                        //If it's been longer than saveAfter, save mid-stream
+                        val save = if (lastSaveAt != null
+                            && Instant.now().isAfter(
+                                lastSaveAt!!.plus(saveAfter.toJavaDuration())
+                            )
+                        ) {
+                            lastSaveAt = Instant.now()
+                            lastSaved = this
+                            true
+                        } else {
+                            false
+                        }
+
+                        val message = wrapperBuilder(this, save)
                         if (!issueOutbound(type, message)) {
-                            errorLog("Enqueue of save request failed for saveAfter()", null)
+                            errorLog("Enqueue of non-save request failed for saveAfter()", null)
+                        }
+                    } ?: run {
+                        if (last != null && last != lastSaved) {
+                            lastSaved = last
+                            lastSaveAt = Instant.now()
+                            val message = wrapperBuilder(last!!, true)
+                            if (!issueOutbound(type, message)) {
+                                errorLog("Enqueue of save request failed for saveAfter()", null)
+                            }
                         }
                     }
                 }
+            } catch (t: Throwable) {
+                channel.close(t)
+                errorLog("Exception on save after thread, closing channel and bailing", t)
             }
+
+            saveAfterJobs.remove(jobId)
         }
 
         return channel
@@ -473,14 +458,17 @@ class WebsocketPixelblazeClient internal constructor(
 
     override fun close() {
         runBlocking {
-            scheduleHandler.cancel()
+            saveAfterJobs.values.forEach { job -> job.cancel() }
+            cronMessages.values.forEach { job -> job.cancel() }
+
             connectionHandler.cancel()
-            scheduleHandler.join()
             connectionHandler.join()
         }
     }
 
-    class Builder {
+    class Builder(
+        private val address: String
+    ) {
         private val watchers: ConcurrentMap<Inbound<InboundMessage>, ConcurrentLinkedQueue<Watcher<InboundMessage>>> =
             ConcurrentHashMap()
         private val textParsers: PriorityBlockingQueue<TextParser<*>> =
@@ -488,10 +476,14 @@ class WebsocketPixelblazeClient internal constructor(
         private val binaryParsers: ConcurrentMap<InboundBinary<*>, SerialParser<*>> = ConcurrentHashMap()
         private val gsonBuilder: GsonBuilder = GsonBuilder()
 
+        private var ioLoopDispatcher: CoroutineDispatcher = Dispatchers.IO
+        private var saveAfterDispatcher: CoroutineDispatcher = Dispatchers.Default
+        private var cronDispatcher: CoroutineDispatcher = Dispatchers.Default
+
         private var httpClient: HttpClient? = null
-        private var address: String? = null
-        private var port: Int = 81
-        private var config: PixelblazeConfig = PixelblazeConfig()
+        private var port: Int? = null
+        private var config: PixelblazeConfig? = null
+
         private var connectionWatcher: (ConnectionEvent, String?, Throwable?) -> Unit = { _, _, _ -> }
         private var errorLog: (String?, Throwable?) -> Unit = { _, _ -> }
         private var infoLog: (String) -> Unit = { _ -> }
@@ -536,11 +528,6 @@ class WebsocketPixelblazeClient internal constructor(
             return this
         }
 
-        fun setAddress(address: String): Builder {
-            this.address = address
-            return this
-        }
-
         fun setPort(port: Int): Builder {
             this.port = port
             return this
@@ -571,32 +558,52 @@ class WebsocketPixelblazeClient internal constructor(
             return this
         }
 
-        fun build(): WebsocketPixelblazeClient {
+        fun setIoLoopDispatcher(dispatcher: CoroutineDispatcher): Builder {
+            ioLoopDispatcher = dispatcher
+            return this
+        }
+
+        fun setSaveAfterDispatcher(dispatcher: CoroutineDispatcher): Builder {
+            saveAfterDispatcher = dispatcher
+            return this
+        }
+
+        fun setRepeatedOutboundDispatcher(dispatcher: CoroutineDispatcher): Builder {
+            cronDispatcher = dispatcher
+            return this
+        }
+
+        fun build(): WebsocketPixelblaze {
             val httpClient = httpClient ?: HttpClient {
                 install(WebSockets)
             }
 
-            return WebsocketPixelblazeClient(
+            return WebsocketPixelblaze(
                 watchers = watchers,
                 textParsers = textParsers,
                 binaryParsers = binaryParsers,
                 gson = gsonBuilder.create(),
                 httpClient = httpClient,
-                address = address ?: throw RuntimeException("No address specified"),
-                port = port,
-                config = config,
+                address = address,
+                port = port ?: throw RuntimeException("No port specified"),
+                config = config ?: throw RuntimeException("No config specified"),
                 connectionWatcher = connectionWatcher,
                 errorLog = errorLog,
                 infoLog = infoLog,
-                debugLog = debugLog
+                debugLog = debugLog,
+                ioLoopDispatcher = ioLoopDispatcher,
+                saveAfterDispatcher = saveAfterDispatcher,
+                cronDispatcher = cronDispatcher
             )
         }
     }
 
     companion object {
 
-        fun builder(): Builder {
-            return parserlessBuilder()
+        fun defaultBuilder(host: String): Builder {
+            return bareBuilder(host)
+                .setPort(81)
+                .setConfig(PixelblazeConfig.default())
                 .setBinaryParser(InboundPreviewImage, PreviewImage::fromBinary).second
                 .setBinaryParser(InboundPreviewFrame, PreviewFrame::fromBinary).second
                 .setBinaryParser(InboundProgramList, ProgramList::fromBinary).second
@@ -610,8 +617,9 @@ class WebsocketPixelblazeClient internal constructor(
                 .addTextParser(7000, InboundAck, Ack::fromText).second
         }
 
-        fun parserlessBuilder(): Builder {
-            return Builder()
+        fun bareBuilder(host: String): Builder {
+            return Builder(host)
         }
+
     }
 }

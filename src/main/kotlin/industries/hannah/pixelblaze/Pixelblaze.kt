@@ -11,7 +11,7 @@ typealias WatcherID = UUID
 typealias ParserID = UUID
 typealias ScheduledMessageId = UUID
 
-interface PixelblazeClient : Closeable {
+interface Pixelblaze : Closeable {
 
     fun <Out, Wrapper : OutboundMessage<*, Out>> issueOutbound(type: Outbound<Wrapper>, msg: Wrapper): Boolean
 
@@ -60,6 +60,8 @@ interface PixelblazeClient : Closeable {
 
     companion object {
         const val DEFAULT_PLAYLIST = "_defaultplaylist_"
+
+        fun default(host: String): Pixelblaze = WebsocketPixelblaze.defaultBuilder(host).build()
 
         fun humanizeVarName(varName: String): String {
             TODO()

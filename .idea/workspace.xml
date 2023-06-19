@@ -4,15 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="bac320fe-f3d8-48cb-8294-7d2b1eca689a" name="Changes" comment="Implement interface in websocket client">
-      <change afterPath="$PROJECT_DIR$/LICENSE" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+    <list default="true" id="bac320fe-f3d8-48cb-8294-7d2b1eca689a" name="Changes" comment="Polish off impl">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/Enums.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/Enums.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/Inbound.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/Inbound.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/PixelblazeClient.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/PixelblazeClient.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/PixelblazeClient.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/Pixelblaze.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/PixelblazeConfig.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/PixelblazeConfig.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/WebsocketPixelblazeClient.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/WebsocketPixelblazeClient.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/WebsocketPixelblazeClient.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/WebsocketPixelblaze.kt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -73,7 +70,7 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1686884861554</updated>
-      <workItem from="1686884863004" duration="148423000" />
+      <workItem from="1686884863004" duration="155300000" />
     </task>
     <task id="LOCAL-00001" summary="lol git">
       <created>1686965358941</created>
@@ -124,7 +121,14 @@
       <option name="project" value="LOCAL" />
       <updated>1687137715894</updated>
     </task>
-    <option name="localTasksCounter" value="8" />
+    <task id="LOCAL-00008" summary="Polish off impl">
+      <created>1687142560884</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1687142560884</updated>
+    </task>
+    <option name="localTasksCounter" value="9" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -149,6 +153,7 @@
     <MESSAGE value="Total revamp, continued" />
     <MESSAGE value="Total revamp of core logic and builder ready for a workout" />
     <MESSAGE value="Implement interface in websocket client" />
-    <option name="LAST_COMMIT_MESSAGE" value="Implement interface in websocket client" />
+    <MESSAGE value="Polish off impl" />
+    <option name="LAST_COMMIT_MESSAGE" value="Polish off impl" />
   </component>
 </project>
