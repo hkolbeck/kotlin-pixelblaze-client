@@ -48,6 +48,7 @@ interface Pixelblaze : Closeable {
 
     fun removeWatcher(id: WatcherID): Boolean
 
+    fun removeWatchersForType(type: Inbound<*>): List<WatcherID>
 
     fun <ParsedType : InboundMessage> addTextParser(
         priority: Int,
@@ -61,6 +62,10 @@ interface Pixelblaze : Closeable {
     ): ParserID
 
     fun removeParser(id: ParserID): Boolean
+
+    fun removeTextParsersForType(type: InboundText<*>): List<ParserID>
+
+    fun removeBinaryParserForType(type: InboundBinary<*>): ParserID?
 
     companion object {
         const val DEFAULT_PLAYLIST = "_defaultplaylist_"

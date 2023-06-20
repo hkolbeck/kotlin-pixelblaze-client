@@ -242,6 +242,9 @@ class WebsocketPixelblaze internal constructor(
         return watchers.any { (_, list) -> list.removeIf { watcher -> watcher.id == id } }
     }
 
+    override fun removeWatchersForType(type: Inbound<*>): List<WatcherID> =
+        watchers.remove(type)?.map { it.id } ?: listOf()
+
     override fun <ParsedType : InboundMessage> addTextParser(
         priority: Int,
         msgType: InboundText<ParsedType>,
@@ -272,6 +275,23 @@ class WebsocketPixelblaze internal constructor(
 
         return found
     }
+
+    override fun removeTextParsersForType(type: InboundText<*>): List<ParserID> {
+        val removed = mutableListOf<ParserID>()
+        textParsers.removeIf {
+            if (it.type == type) {
+                removed.add(it.id)
+                true
+            } else {
+                false
+            }
+        }
+
+        return removed
+    }
+
+    override fun removeBinaryParserForType(type: InboundBinary<*>): ParserID? =
+        binaryParsers.remove(type.binaryFlag)?.id
 
     private suspend fun watchConnection(scope: CoroutineScope): Boolean {
         var unclosed = false
@@ -544,6 +564,11 @@ class WebsocketPixelblaze internal constructor(
             return this
         }
 
+        fun addGsonAdapters(adapters: Map<Type, Any>): Builder {
+            adapters.forEach { (type, adapter) -> gsonBuilder.registerTypeAdapter(type, adapter) }
+            return this
+        }
+
         fun setHttpClient(httpClient: HttpClient): Builder {
             this.httpClient = httpClient
             return this
@@ -672,16 +697,12 @@ class WebsocketPixelblaze internal constructor(
         }
 
         fun build(): WebsocketPixelblaze {
-            val httpClient = httpClient ?: HttpClient {
-                install(WebSockets)
-            }
-
             return WebsocketPixelblaze(
                 watchers = watchers,
                 textParsers = textParsers,
                 binaryParsers = binaryParsers,
                 gson = gsonBuilder.create(),
-                httpClient = httpClient,
+                httpClient = httpClient ?: throw RuntimeException("No HTTP client specified"),
                 address = address ?: throw RuntimeException("No pixelblaze IP specified!"),
                 port = port ?: throw RuntimeException("No port specified"),
                 config = config ?: throw RuntimeException("No config specified"),
@@ -703,6 +724,9 @@ class WebsocketPixelblaze internal constructor(
                 .setPixelblazeIp("192.168.4.1")
                 .setPort(81)
                 .setConfig(PixelblazeConfig.default())
+                .setHttpClient(HttpClient {
+                    install(WebSockets)
+                })
                 .addDefaultParsers()
         }
 
