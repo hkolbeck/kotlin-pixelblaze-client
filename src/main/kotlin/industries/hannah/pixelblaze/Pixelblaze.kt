@@ -1,6 +1,7 @@
 package industries.hannah.pixelblaze
 
 import com.google.gson.Gson
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.SendChannel
 import java.io.Closeable
 import java.io.InputStream
@@ -40,6 +41,12 @@ interface Pixelblaze : Closeable {
     fun <ParsedType : InboundMessage> addWatcher(
         type: Inbound<ParsedType>,
         handler: (ParsedType) -> Unit
+    ): WatcherID = addWatcher(type, handler, null)
+
+    fun <ParsedType : InboundMessage> addWatcher(
+        type: Inbound<ParsedType>,
+        handler: (ParsedType) -> Unit,
+        coroutineScope: CoroutineScope?
     ): WatcherID
 
     fun removeWatcher(id: WatcherID): Boolean
@@ -61,7 +68,9 @@ interface Pixelblaze : Closeable {
     companion object {
         const val DEFAULT_PLAYLIST = "_defaultplaylist_"
 
-        fun default(host: String): Pixelblaze = WebsocketPixelblaze.defaultBuilder(host).build()
+        fun default(): Pixelblaze = WebsocketPixelblaze.defaultBuilder().build()
+
+        fun default(pixelblazeIp: String): Pixelblaze = WebsocketPixelblaze.defaultBuilder().build()
 
         fun humanizeVarName(varName: String): String {
             TODO()

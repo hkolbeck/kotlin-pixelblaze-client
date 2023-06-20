@@ -9,29 +9,29 @@ sealed interface Outbound<R> {
     val frameType: FrameType
 }
 
-abstract class OutboundJson<R : OutboundJsonMessage<*>>(
+abstract class OutboundText<R : OutboundJsonMessage<*>>(
     val messageClass: Class<R>
 ) : Outbound<R> {
     override val frameType = FrameType.TEXT
 }
 
-object OutboundGetPlaylistJson : OutboundJson<GetPlaylist>(GetPlaylist::class.java)
-object OutboundSetPlaylistPositionJson : OutboundJson<SetPlaylistPosition>(SetPlaylistPosition::class.java)
-object OutboundGetPatternControlsJson : OutboundJson<GetPatternControls>(GetPatternControls::class.java)
-object OutboundGetPreviewImageJson : OutboundJson<GetPreviewImage>(GetPreviewImage::class.java)
-object OutboundSetSendUpdatesJson : OutboundJson<SetSendUpdates>(SetSendUpdates::class.java)
-object OutboundSetCurrentPatternControlsJson :
-    OutboundJson<SetCurrentPatternControls>(SetCurrentPatternControls::class.java)
+object OutboundGetPlaylist : OutboundText<GetPlaylist>(GetPlaylist::class.java)
+object OutboundSetPlaylistPosition : OutboundText<SetPlaylistPosition>(SetPlaylistPosition::class.java)
+object OutboundGetPatternControls : OutboundText<GetPatternControls>(GetPatternControls::class.java)
+object OutboundGetPreviewImage : OutboundText<GetPreviewImage>(GetPreviewImage::class.java)
+object OutboundSetSendUpdates : OutboundText<SetSendUpdates>(SetSendUpdates::class.java)
+object OutboundSetCurrentPatternControls :
+    OutboundText<SetCurrentPatternControls>(SetCurrentPatternControls::class.java)
 
-object OutboundSetBrightnessJson : OutboundJson<SetBrightness>(SetBrightness::class.java)
-object OutboundSetMaxBrightnessJson : OutboundJson<SetMaxBrightness>(SetMaxBrightness::class.java)
-object OutboundSetPixelCountJson : OutboundJson<SetPixelCount>(SetPixelCount::class.java)
-object OutboundGetAllProgramsJson : OutboundJson<GetAllPrograms>(GetAllPrograms::class.java)
-object OutboundNextPatternJson : OutboundJson<NextPattern>(NextPattern::class.java)
-object OutboundGetPeersJson : OutboundJson<GetPeers>(GetPeers::class.java)
-object OutboundGetSystemStateJson : OutboundJson<GetSystemState>(GetSystemState::class.java)
-object OutboundPingJson : OutboundJson<Ping>(Ping::class.java)
-class OutboundRawJson<R : OutboundJsonMessage<*>>(messageClass: Class<R>) : OutboundJson<R>(messageClass)
+object OutboundSetBrightness : OutboundText<SetBrightness>(SetBrightness::class.java)
+object OutboundSetMaxBrightness : OutboundText<SetMaxBrightness>(SetMaxBrightness::class.java)
+object OutboundSetPixelCount : OutboundText<SetPixelCount>(SetPixelCount::class.java)
+object OutboundGetAllPrograms : OutboundText<GetAllPrograms>(GetAllPrograms::class.java)
+object OutboundNextPattern : OutboundText<NextPattern>(NextPattern::class.java)
+object OutboundGetPeers : OutboundText<GetPeers>(GetPeers::class.java)
+object OutboundGetSystemState : OutboundText<GetSystemState>(GetSystemState::class.java)
+object OutboundPing : OutboundText<Ping>(Ping::class.java)
+class OutboundRawText<R : OutboundJsonMessage<*>>(messageClass: Class<R>) : OutboundText<R>(messageClass)
 
 
 abstract class OutboundBinary<R>(
@@ -119,13 +119,16 @@ abstract class OutboundJsonMessage<M> : OutboundMessage<Gson, M> {
     }
 }
 
+open class RawMapMessage<K>(private val map: Map<K, Any>) :
+    OutboundJsonMessage<Map<String, Any>>() {
+    override fun serialize(gson: Gson): String = gson.toJson(map)
+}
+
 open class TrivialJsonMessage<V>(key: String, value: V) :
     OutboundJsonMessage<Map<String, V>>() {
     private val body = mapOf(Pair(key, value))
 
-    override fun serialize(gson: Gson): String {
-        return gson.toJson(body)
-    }
+    override fun serialize(gson: Gson): String =  gson.toJson(body)
 }
 
 class GetPlaylist(id: String) : TrivialJsonMessage<String>("getPlaylist", id)
@@ -133,7 +136,6 @@ class SetPlaylistPosition(position: UInt) : TrivialJsonMessage<Int>("position", 
 class GetPatternControls(id: String) : TrivialJsonMessage<String>("patternId", id)
 class GetPreviewImage(id: String) : TrivialJsonMessage<String>("patternId", id)
 class SetSendUpdates(sendUpdates: Boolean) : TrivialJsonMessage<Boolean>("sendUpdates", sendUpdates)
-
 
 open class SaveOptionalSet<V>(key: String, value: V, save: Boolean) : OutboundJsonMessage<Map<String, Any>>() {
     private val body = mapOf(
@@ -147,9 +149,9 @@ open class SaveOptionalSet<V>(key: String, value: V, save: Boolean) : OutboundJs
 }
 
 class SetCurrentPatternControls(
-    controls: List<Control>,
+    controls: Map<String, Float>,
     saveToFlash: Boolean
-) : SaveOptionalSet<List<Control>>("controls", controls, saveToFlash)
+) : SaveOptionalSet<Map<String, Float>>("controls", controls, saveToFlash)
 
 class SetBrightness(
     brightness: Float,

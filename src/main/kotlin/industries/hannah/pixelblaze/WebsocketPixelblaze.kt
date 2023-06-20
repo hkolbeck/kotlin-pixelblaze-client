@@ -16,6 +16,7 @@ import java.lang.reflect.Type
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.*
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.collections.ArrayDeque
 import kotlin.collections.set
 import kotlin.coroutines.Continuation
@@ -83,6 +84,7 @@ class WebsocketPixelblaze internal constructor(
     internal data class Watcher<Message : InboundMessage>(
         val id: WatcherID,
         val handlerFn: (Message) -> Unit,
+        val coroutineScope: CoroutineScope?
     )
 
     private val smallTaskCoroutines = CoroutineScope(Dispatchers.Default)
@@ -120,11 +122,15 @@ class WebsocketPixelblaze internal constructor(
         inboundType: Inbound<Resp>,
         maxWait: Duration
     ): Resp? {
+        val guard = AtomicBoolean(false)
+
         return suspendCoroutineWithTimeout(maxWait) { continuation ->
             var id: WatcherID? = null
             val watchFn: (Resp) -> Unit = { resp: Resp ->
-                continuation.resume(resp)
-                removeWatcher(id!!)
+                if (!guard.getAndSet(true)) { //Check if this watcher has been invoked, bail if it has
+                    continuation.resume(resp)
+                    removeWatcher(id!!)
+                }
             }
 
             id = addWatcher(inboundType, watchFn)
@@ -230,11 +236,12 @@ class WebsocketPixelblaze internal constructor(
 
     override fun <ParsedType : InboundMessage> addWatcher(
         type: Inbound<ParsedType>,
-        handler: (ParsedType) -> Unit
+        handler: (ParsedType) -> Unit,
+        coroutineScope: CoroutineScope?
     ): WatcherID {
         val watcherID = UUID.randomUUID()
         watchers.putIfAbsent(type as Inbound<InboundMessage>, ConcurrentLinkedQueue())
-        watchers[type]!!.add(Watcher(watcherID, handler as (InboundMessage) -> Unit))
+        watchers[type]!!.add(Watcher(watcherID, handler as (InboundMessage) -> Unit, coroutineScope))
         return watcherID
     }
 
@@ -301,7 +308,14 @@ class WebsocketPixelblaze internal constructor(
                     readFrame(receiveResult.getOrThrow())?.run {
                         watchers[this.first]?.forEach { watcher ->
                             try {
-                                watcher.handlerFn(this.second)
+                                if (watcher.coroutineScope == null) {
+                                    watcher.handlerFn(this.second)
+                                } else {
+                                    val msg = this.second
+                                    watcher.coroutineScope.launch {
+                                        watcher.handlerFn(msg)
+                                    }
+                                }
                             } catch (t: Throwable) {
                                 val msg = "Exception in watcher. Type ${this.first.javaClass}, id: ${watcher.id}"
                                 connectionWatcher(ConnectionEvent.WatcherFailed, msg, t)
@@ -442,7 +456,7 @@ class WebsocketPixelblaze internal constructor(
         outgoing: SendChannel<Frame>
     ) {
         val context: Any = when (message.type) {
-            is OutboundJson<*> -> gson
+            is OutboundText<*> -> gson
             is OutboundBinary<*> -> BinarySerializationContext(
                 config.outboundFrameSize,
                 message.type.binaryFlag,
@@ -467,7 +481,6 @@ class WebsocketPixelblaze internal constructor(
     }
 
     class Builder(
-        private val address: String
     ) {
         private val watchers: ConcurrentMap<Inbound<InboundMessage>, ConcurrentLinkedQueue<Watcher<InboundMessage>>> =
             ConcurrentHashMap()
@@ -484,18 +497,30 @@ class WebsocketPixelblaze internal constructor(
         private var port: Int? = null
         private var config: PixelblazeConfig? = null
 
+        private var address: String? = null
         private var connectionWatcher: (ConnectionEvent, String?, Throwable?) -> Unit = { _, _, _ -> }
         private var errorLog: (String?, Throwable?) -> Unit = { _, _ -> }
         private var infoLog: (String) -> Unit = { _ -> }
         private var debugLog: (String) -> Unit = { _ -> }
 
+        fun setPixelblazeIp(pixelblazeIp: String): Builder {
+            this.address = pixelblazeIp
+            return this
+        }
+
         fun <ParsedType : InboundMessage> addWatcher(
             type: Inbound<ParsedType>,
             handler: (ParsedType) -> Unit
+        ): Pair<WatcherID, Builder> = addWatcher(type, handler, null)
+
+        fun <ParsedType : InboundMessage> addWatcher(
+            type: Inbound<ParsedType>,
+            handler: (ParsedType) -> Unit,
+            coroutineScope: CoroutineScope?
         ): Pair<WatcherID, Builder> {
             val watcherID = UUID.randomUUID()
             watchers.putIfAbsent(type as Inbound<InboundMessage>, ConcurrentLinkedQueue())
-            watchers[type]!!.add(Watcher(watcherID, handler as (InboundMessage) -> Unit))
+            watchers[type]!!.add(Watcher(watcherID, handler as (InboundMessage) -> Unit, coroutineScope))
             return Pair(watcherID, this)
         }
 
@@ -573,6 +598,83 @@ class WebsocketPixelblaze internal constructor(
             return this
         }
 
+        fun addDefaultParsers(except: Set<Inbound<*>> = setOf()): Builder {
+            return this.run {
+                if (except.contains(InboundPreviewImage)) this
+                else this.setBinaryParser(
+                    InboundPreviewImage,
+                    PreviewImage::fromBinary
+                ).second
+            }.run {
+                if (except.contains(InboundPreviewFrame)) this
+                else this.setBinaryParser(
+                    InboundPreviewFrame,
+                    PreviewFrame::fromBinary
+                ).second
+            }.run {
+                if (except.contains(InboundProgramList)) this
+                else this.setBinaryParser(
+                    InboundProgramList,
+                    ProgramList::fromBinary
+                ).second
+            }.run {
+                if (except.contains(InboundExpanderChannels)) this
+                else this.setBinaryParser(
+                    InboundExpanderChannels,
+                    ExpanderChannels::fromBinary
+                ).second
+            }.run {
+                if (except.contains(InboundStats)) this
+                else this.addTextParser(
+                    1000,
+                    InboundStats,
+                    Stats::fromText
+                ).second
+            }.run {
+                if (except.contains(InboundSequencerState)) this
+                else this.addTextParser(
+                    2000,
+                    InboundSequencerState,
+                    SequencerState::fromText
+                ).second
+            }.run {
+                if (except.contains(InboundSettings)) this
+                else this.addTextParser(
+                    3000,
+                    InboundSettings,
+                    Settings::fromText
+                ).second
+            }.run {
+                if (except.contains(InboundPeers)) this
+                else this.addTextParser(
+                    4000,
+                    InboundPeers,
+                    Peers::fromText
+                ).second
+            }.run {
+                if (except.contains(InboundPlayist)) this
+                else this.addTextParser(
+                    5000,
+                    InboundPlayist,
+                    Playlist::fromText
+                ).second
+            }.run {
+                if (except.contains(InboundPlaylistUpdate)) this
+                else this.addTextParser(
+                    6000,
+                    InboundPlaylistUpdate,
+                    PlaylistUpdate::fromText
+                ).second
+            }.run {
+                if (except.contains(InboundAck)) this
+                else this.addTextParser(
+                    7000,
+                    InboundAck,
+                    Ack::fromText
+                ).second
+            }
+        }
+
         fun build(): WebsocketPixelblaze {
             val httpClient = httpClient ?: HttpClient {
                 install(WebSockets)
@@ -584,7 +686,7 @@ class WebsocketPixelblaze internal constructor(
                 binaryParsers = binaryParsers,
                 gson = gsonBuilder.create(),
                 httpClient = httpClient,
-                address = address,
+                address = address ?: throw RuntimeException("No pixelblaze IP specified!"),
                 port = port ?: throw RuntimeException("No port specified"),
                 config = config ?: throw RuntimeException("No config specified"),
                 connectionWatcher = connectionWatcher,
@@ -600,25 +702,16 @@ class WebsocketPixelblaze internal constructor(
 
     companion object {
 
-        fun defaultBuilder(host: String): Builder {
-            return bareBuilder(host)
+        fun defaultBuilder(): Builder {
+            return bareBuilder()
+                .setPixelblazeIp("192.168.4.1")
                 .setPort(81)
                 .setConfig(PixelblazeConfig.default())
-                .setBinaryParser(InboundPreviewImage, PreviewImage::fromBinary).second
-                .setBinaryParser(InboundPreviewFrame, PreviewFrame::fromBinary).second
-                .setBinaryParser(InboundProgramList, ProgramList::fromBinary).second
-                .setBinaryParser(InboundExpanderChannels, ExpanderChannels::fromBinary).second
-                .addTextParser(1000, InboundStats, Stats::fromText).second
-                .addTextParser(2000, InboundSequencerState, SequencerState::fromText).second
-                .addTextParser(3000, InboundSettings, Settings::fromText).second
-                .addTextParser(4000, InboundPeers, Peers::fromText).second
-                .addTextParser(5000, InboundPlayist, Playlist::fromText).second
-                .addTextParser(6000, InboundPlaylistUpdate, PlaylistUpdate::fromText).second
-                .addTextParser(7000, InboundAck, Ack::fromText).second
+                .addDefaultParsers()
         }
 
-        fun bareBuilder(host: String): Builder {
-            return Builder(host)
+        fun bareBuilder(): Builder {
+            return Builder()
         }
 
     }
