@@ -229,6 +229,17 @@ class WebsocketPixelblaze internal constructor(
 
     override fun <ParsedType : InboundMessage> addWatcher(
         type: Inbound<ParsedType>,
+        handler: (ParsedType) -> Unit
+    ): WatcherID = addWatcherHelper(type, null, handler)
+
+    override fun <ParsedType : InboundMessage> addWatcher(
+        type: Inbound<ParsedType>,
+        coroutineScope: CoroutineScope,
+        handler: (ParsedType) -> Unit
+    ): WatcherID = addWatcherHelper(type, coroutineScope, handler)
+
+    private fun <ParsedType : InboundMessage> addWatcherHelper(
+        type: Inbound<ParsedType>,
         coroutineScope: CoroutineScope?,
         handler: (ParsedType) -> Unit
     ): WatcherID {
@@ -361,9 +372,11 @@ class WebsocketPixelblaze internal constructor(
         return when (frame) {
             is Frame.Text -> {
                 for (parser in textParsers) {
-                    val parsed = parser.parseFn(gson, frame.readText())
-                    if (parsed != null) {
-                        return Pair(parser.type, parsed)
+                    if (watchers[parser.type as Inbound<*>]?.isNotEmpty() == true) {
+                        val parsed = parser.parseFn(gson, frame.readText())
+                        if (parsed != null) {
+                            return Pair(parser.type, parsed)
+                        }
                     }
                 }
                 null
@@ -372,11 +385,15 @@ class WebsocketPixelblaze internal constructor(
             is Frame.Binary -> {
                 readBinaryFrame(frame)?.run {
                     val message = this
-                    binaryParsers[message.first.binaryFlag]?.run {
-                        val parser = this
-                        parser.parseFn(message.second)?.run {
-                            Pair(parser.type, this)
+                    if (watchers[message.first as Inbound<*>]?.isNotEmpty() == true) {
+                        binaryParsers[message.first.binaryFlag]?.run {
+                            val parser = this
+                            parser.parseFn(message.second)?.run {
+                                Pair(parser.type, this)
+                            }
                         }
+                    } else {
+                        null
                     }
                 }
             }
@@ -527,11 +544,16 @@ class WebsocketPixelblaze internal constructor(
         fun <ParsedType : InboundMessage> addWatcher(
             type: Inbound<ParsedType>,
             handler: (ParsedType) -> Unit
-        ): Pair<WatcherID, Builder> = addWatcher(type, null, handler)
+        ): Pair<WatcherID, Builder> {
+            val watcherID = UUID.randomUUID()
+            watchers.putIfAbsent(type as Inbound<InboundMessage>, ConcurrentLinkedQueue())
+            watchers[type]!!.add(Watcher(watcherID, handler as (InboundMessage) -> Unit, null))
+            return Pair(watcherID, this)
+        }
 
         fun <ParsedType : InboundMessage> addWatcher(
             type: Inbound<ParsedType>,
-            coroutineScope: CoroutineScope?,
+            coroutineScope: CoroutineScope,
             handler: (ParsedType) -> Unit
         ): Pair<WatcherID, Builder> {
             val watcherID = UUID.randomUUID()
