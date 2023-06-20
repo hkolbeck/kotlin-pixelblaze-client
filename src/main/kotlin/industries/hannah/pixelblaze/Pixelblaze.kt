@@ -12,6 +12,26 @@ typealias WatcherID = UUID
 typealias ParserID = UUID
 typealias ScheduledMessageId = UUID
 
+/**
+ * A client for the Pixelblaze LED controller
+ *
+ * The API does not provide native support for a request-response model, instead it focuses on sending and receiving
+ * messages, with no real connection between the two. This is expressed here by the primary interface centering around:
+ *  1. Outbound messages with no response specified
+ *  2. Parsers for inbound messages
+ *  3. Watchers for inbound message types
+ *
+ * Parsers and watchers can be specified at build time, or added/removed at any point. Support is included for a
+ * subset of inbound and outbound messages, but I've attempted to make adding additional types as simple as possible.
+ *
+ * For usage of the discovery API, a separate client is provided: [Discovery]
+ *
+ * To maintain a cache of the current state of the Pixelblaze, use [PixelblazeStateCache]
+ *
+ * For a set of examples of usage, check the examples subdirectory
+ *
+ * Instances of Pixelblaze must be safe to share between threads, including modification of parsers and watchers
+ */
 interface Pixelblaze : Closeable {
 
     /**

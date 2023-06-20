@@ -522,9 +522,9 @@ class WebsocketPixelblaze internal constructor(
         private val binaryParsers: ConcurrentMap<Byte, SerialParser<*>> = ConcurrentHashMap()
         private val gsonBuilder: GsonBuilder = GsonBuilder()
 
-        private var ioLoopDispatcher: CoroutineDispatcher = Dispatchers.IO
-        private var saveAfterDispatcher: CoroutineDispatcher = Dispatchers.Default
-        private var cronDispatcher: CoroutineDispatcher = Dispatchers.Default
+        private var ioLoopDispatcher: CoroutineDispatcher? = null
+        private var saveAfterDispatcher: CoroutineDispatcher? = null
+        private var cronDispatcher: CoroutineDispatcher? = null
 
         private var httpClient: HttpClient? = null
         private var port: Int? = null
@@ -732,9 +732,9 @@ class WebsocketPixelblaze internal constructor(
                 errorLog = errorLog,
                 infoLog = infoLog,
                 debugLog = debugLog,
-                ioLoopDispatcher = ioLoopDispatcher,
-                saveAfterDispatcher = saveAfterDispatcher,
-                cronDispatcher = cronDispatcher
+                ioLoopDispatcher = ioLoopDispatcher ?: throw RuntimeException("No io loop dispatcher specified"),
+                saveAfterDispatcher = saveAfterDispatcher ?: throw RuntimeException("No save after dispatcher specified"),
+                cronDispatcher = cronDispatcher ?: throw RuntimeException("No scheduled dispatcher specified")
             )
         }
     }
@@ -749,6 +749,9 @@ class WebsocketPixelblaze internal constructor(
                 .setHttpClient(HttpClient {
                     install(WebSockets)
                 })
+                .setIoLoopDispatcher(Dispatchers.IO)
+                .setRepeatedOutboundDispatcher(Dispatchers.Default)
+                .setSaveAfterDispatcher(Dispatchers.Default)
                 .addDefaultParsers()
         }
 

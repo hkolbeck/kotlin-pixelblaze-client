@@ -5,12 +5,14 @@ import kotlin.time.DurationUnit
 import kotlin.time.toDuration
 
 class PixelblazeConfig(
-    requestQueueDepth: UInt,
-    inboundBufferQueueDepth: UInt,
-    outboundFrameSize: UInt,
-    saveAfterWriteBufferSize: UInt,
-    val sleepOnNothingToDo: Duration,
-    val sleepStrategyOnDisconnect: (UInt) -> Duration
+    requestQueueDepth: UInt = 50u,
+    inboundBufferQueueDepth: UInt =  10u,
+    outboundFrameSize: UInt = 1024u,
+    saveAfterWriteBufferSize: UInt = 10u,
+    val sleepOnNothingToDo: Duration = 10.toDuration(DurationUnit.MILLISECONDS),
+    val sleepStrategyOnDisconnect: (UInt) -> Duration = { retry ->
+        (retry.toLong()).toDuration(DurationUnit.MILLISECONDS)
+    },
 ) {
     val inboundBufferQueueDepth: Int = inboundBufferQueueDepth.toInt()
     val outboundQueueDepth: Int = requestQueueDepth.toInt()
@@ -18,15 +20,6 @@ class PixelblazeConfig(
     val saveAfterWriteBufferSize: Int = saveAfterWriteBufferSize.toInt()
 
     companion object {
-        fun default(): PixelblazeConfig = PixelblazeConfig(
-            requestQueueDepth = 50u,
-            inboundBufferQueueDepth = 10u,
-            outboundFrameSize = 1024u,
-            saveAfterWriteBufferSize = 10u,
-            sleepOnNothingToDo = 10.toDuration(DurationUnit.MILLISECONDS),
-            sleepStrategyOnDisconnect = { retry ->
-                (retry.toLong()).toDuration(DurationUnit.MILLISECONDS)
-            },
-        )
+        fun default(): PixelblazeConfig = PixelblazeConfig()
     }
 }

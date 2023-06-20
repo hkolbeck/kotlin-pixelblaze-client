@@ -43,7 +43,6 @@ fun parseMyInbound(gson: Gson, raw: String): MyInboundMessage? {
     }
 }
 
-
 fun main() {
     /**
      * Watchers and parsers can still be added and removed on the client after it's built. Both add* functions on the
@@ -63,7 +62,8 @@ fun main() {
 
     runBlocking {
         while (true) {
-            delay(1000)
+            pixelblaze.issueOutbound(MyOutboundMessage)
+            delay(3000)
         }
     }
 }
