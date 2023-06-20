@@ -608,9 +608,9 @@ class WebsocketPixelblaze internal constructor(
                     PreviewFrame::fromBinary
                 ).second
             }.run {
-                if (except.contains(InboundProgramList)) this
+                if (except.contains(InboundAllPrograms)) this
                 else this.setBinaryParser(
-                    InboundProgramList,
+                    InboundAllPrograms,
                     ProgramList::fromBinary
                 ).second
             }.run {
@@ -648,10 +648,10 @@ class WebsocketPixelblaze internal constructor(
                     Peers::fromText
                 ).second
             }.run {
-                if (except.contains(InboundPlayist)) this
+                if (except.contains(InboundPlaylist)) this
                 else this.addTextParser(
                     5000,
-                    InboundPlayist,
+                    InboundPlaylist,
                     Playlist::fromText
                 ).second
             }.run {

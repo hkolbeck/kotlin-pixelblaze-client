@@ -1,6 +1,6 @@
 package industries.hannah.pixelblaze.examples
 
-import industries.hannah.pixelblaze.InboundPlayist
+import industries.hannah.pixelblaze.InboundPlaylist
 import industries.hannah.pixelblaze.WebsocketPixelblaze
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -12,7 +12,7 @@ import kotlinx.coroutines.runBlocking
  */
 fun main() {
     val pixelblaze = WebsocketPixelblaze.defaultBuilder()
-        .addWatcher(InboundPlayist, CoroutineScope(Dispatchers.Default)) {
+        .addWatcher(InboundPlaylist, CoroutineScope(Dispatchers.Default)) {
             // Note that the pattern name is not included here, getting that requires a call with GetAllPrograms
             // or using the PixelblazeMetadataCache
             println("Active pattern moved to ${it.position}, pattern id: ${it.patterns[it.position].id}")
