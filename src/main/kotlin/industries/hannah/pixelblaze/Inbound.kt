@@ -69,7 +69,7 @@ object InboundPlaylistUpdate : InboundText<PlaylistUpdate>(PlaylistUpdate::class
 object InboundAck : InboundText<Ack>(Ack::class.java)
 class InboundParsedText<T : InboundMessage>(extractedType: Type) : InboundText<T>(extractedType)
 
-sealed class InboundMessage
+interface InboundMessage
 
 //JSON Inbound messages
 //TODO: Parse code copied from C++, move to gson annotations?
@@ -87,7 +87,7 @@ data class Stats(
     val rr0: Int,
     val rr1: Int,
     val rebootCounter: Int,
-) : InboundMessage() {
+) : InboundMessage {
     companion object {
         fun fromText(gson: Gson, string: String): Stats? {
             val json = gson.fromJson(string, JsonObject::class.java)
@@ -137,7 +137,7 @@ data class SequencerState(
     val playlistState: PlaylistState,
     val sequencerMode: SequencerMode,
     val runSequencer: Boolean
-) : InboundMessage() {
+) : InboundMessage {
     companion object {
         fun fromText(gson: Gson, string: String): SequencerState? {
             val json = gson.fromJson(string, JsonObject::class.java)
@@ -205,7 +205,7 @@ data class Settings(
     val exp: Int,
     val version: String,
     val chipId: Int,
-) : InboundMessage() {
+) : InboundMessage {
     companion object {
         fun fromText(gson: Gson, string: String): Settings? {
             val json = gson.fromJson(string, JsonObject::class.java)
@@ -263,7 +263,7 @@ data class Peer(
 
 data class Peers(
     val peers: List<Peer>
-) : InboundMessage() {
+) : InboundMessage {
     companion object {
         fun fromText(gson: Gson, string: String): Peers? {
             val json = gson.fromJson(string, JsonObject::class.java)
@@ -302,7 +302,7 @@ data class Playlist(
     val currentDurationMs: Int,
     val remainingCurrentMs: Int,
     val patterns: List<PixelblazePattern>,
-) : InboundMessage() {
+) : InboundMessage {
     companion object {
         fun fromText(gson: Gson, string: String): Playlist? {
             val json = gson.fromJson(string, JsonObject::class.java)
@@ -336,7 +336,7 @@ data class Playlist(
 data class PlaylistUpdate(
     val id: String,
     val patterns: List<PixelblazePattern>,
-) : InboundMessage() {
+) : InboundMessage {
     companion object {
         fun fromText(gson: Gson, string: String): PlaylistUpdate? {
             val json = gson.fromJson(string, JsonObject::class.java)
@@ -364,7 +364,7 @@ data class PlaylistUpdate(
     }
 }
 
-object Ack : InboundMessage() {
+object Ack : InboundMessage {
     fun fromText(gson: Gson, string: String): Ack? {
         val json = gson.fromJson(string, JsonObject::class.java)
 
@@ -378,7 +378,7 @@ object Ack : InboundMessage() {
 
 data class RawJsonInboundMessage(
     val json: JsonObject
-) : InboundMessage()
+) : InboundMessage
 
 // Binary responses
 
@@ -396,7 +396,7 @@ const val EXPANDER_CHANNEL_BYTE_WIDTH = 12
 
 data class ExpanderChannels(
     val channels: List<ExpanderChannel>
-) : InboundMessage() {
+) : InboundMessage {
     companion object {
         fun fromBinary(stream: InputStream): ExpanderChannels? {
             val channelBuffer = ByteArray(EXPANDER_CHANNEL_BYTE_WIDTH)
@@ -426,7 +426,7 @@ data class ExpanderChannels(
 data class PreviewImage(
     val patternId: String,
     val img: BufferedImage
-) : InboundMessage() {
+) : InboundMessage {
     companion object {
         fun fromBinary(stream: InputStream): PreviewImage? {
             val imageIdBuffer = ArrayList<Byte>(16)
@@ -457,7 +457,7 @@ const val PREVIEW_FRAME_MAX_LEN = 1024
 
 data class PreviewFrame(
     val pixels: List<Pixel>
-) : InboundMessage() {
+) : InboundMessage {
     companion object {
         fun fromBinary(stream: InputStream): PreviewFrame? {
             val pixels = ArrayList<Pixel>(PREVIEW_FRAME_MAX_LEN)
@@ -486,7 +486,7 @@ data class NamedPattern(
 
 data class ProgramList(
     val patterns: List<NamedPattern>
-) : InboundMessage() {
+) : InboundMessage {
     companion object {
         fun fromBinary(stream: InputStream): ProgramList? {
             val patterns = stream.bufferedReader().lines().map {
@@ -501,7 +501,7 @@ data class ProgramList(
 
 data class RawBinaryInboundMessage(
     val stream: InputStream
-) : InboundMessage() {
+) : InboundMessage {
     companion object {
         fun fromBinary(stream: InputStream): RawBinaryInboundMessage {
             return RawBinaryInboundMessage(stream)

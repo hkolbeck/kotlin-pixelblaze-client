@@ -31,28 +31,28 @@ interface Pixelblaze : Closeable {
     fun cancelRepeatedOutbound(id: ScheduledMessageId): Boolean
 
     fun <T, Out, Wrapper : OutboundMessage<*, Out>> saveAfter(
-        wrapperBuilder: (T, Boolean) -> Wrapper,
-        saveAfter: Duration
+        saveAfter: Duration,
+        wrapperBuilder: (T, Boolean) -> Wrapper
     ): SendChannel<T>
 
     fun <ParsedType : InboundMessage> addWatcher(
         type: Inbound<ParsedType>,
         handler: (ParsedType) -> Unit
-    ): WatcherID = addWatcher(type, handler, null)
+    ): WatcherID = addWatcher(type, null, handler)
 
     fun <ParsedType : InboundMessage> addWatcher(
         type: Inbound<ParsedType>,
-        handler: (ParsedType) -> Unit,
-        coroutineScope: CoroutineScope?
+        coroutineScope: CoroutineScope?,
+        handler: (ParsedType) -> Unit
     ): WatcherID
 
     fun removeWatcher(id: WatcherID): Boolean
 
 
     fun <ParsedType : InboundMessage> addTextParser(
+        priority: Int,
         msgType: InboundText<ParsedType>,
-        parserFn: (Gson, String) -> ParsedType?,
-        priority: Int
+        parserFn: (Gson, String) -> ParsedType?
     ): ParserID
 
     fun <ParsedType : InboundMessage> setBinaryParser(

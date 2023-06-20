@@ -161,8 +161,8 @@ class WebsocketPixelblaze internal constructor(
     }
 
     override fun <T, Out, Wrapper : OutboundMessage<*, Out>> saveAfter(
-        wrapperBuilder: (T, Boolean) -> Wrapper,
-        saveAfter: Duration
+        saveAfter: Duration,
+        wrapperBuilder: (T, Boolean) -> Wrapper
     ): SendChannel<T> {
         val jobId = UUID.randomUUID()
         val channel = Channel<T>(config.saveAfterWriteBufferSize)
@@ -183,6 +183,7 @@ class WebsocketPixelblaze internal constructor(
                             null
                         }
                     }?.run {
+                        val isDuplicate = this == last
                         last = this
 
                         //If it's been longer than saveAfter, save mid-stream
@@ -198,9 +199,11 @@ class WebsocketPixelblaze internal constructor(
                             false
                         }
 
-                        val message = wrapperBuilder(this, save)
-                        if (!issueOutbound(message)) {
-                            errorLog("Enqueue of non-save request failed for saveAfter()", null)
+                        if (!isDuplicate || save) {
+                            val message = wrapperBuilder(this, save)
+                            if (!issueOutbound(message)) {
+                                errorLog("Enqueue of non-save request failed for saveAfter()", null)
+                            }
                         }
                     } ?: run {
                         if (last != null && last != lastSaved) {
@@ -226,8 +229,8 @@ class WebsocketPixelblaze internal constructor(
 
     override fun <ParsedType : InboundMessage> addWatcher(
         type: Inbound<ParsedType>,
-        handler: (ParsedType) -> Unit,
-        coroutineScope: CoroutineScope?
+        coroutineScope: CoroutineScope?,
+        handler: (ParsedType) -> Unit
     ): WatcherID {
         val watcherID = UUID.randomUUID()
         watchers.putIfAbsent(type as Inbound<InboundMessage>, ConcurrentLinkedQueue())
@@ -240,9 +243,9 @@ class WebsocketPixelblaze internal constructor(
     }
 
     override fun <ParsedType : InboundMessage> addTextParser(
+        priority: Int,
         msgType: InboundText<ParsedType>,
-        parserFn: (Gson, String) -> ParsedType?,
-        priority: Int
+        parserFn: (Gson, String) -> ParsedType?
     ): ParserID {
         val id = UUID.randomUUID()
         textParsers.add(TextParser(id, priority, msgType, parserFn))
@@ -504,12 +507,12 @@ class WebsocketPixelblaze internal constructor(
         fun <ParsedType : InboundMessage> addWatcher(
             type: Inbound<ParsedType>,
             handler: (ParsedType) -> Unit
-        ): Pair<WatcherID, Builder> = addWatcher(type, handler, null)
+        ): Pair<WatcherID, Builder> = addWatcher(type, null, handler)
 
         fun <ParsedType : InboundMessage> addWatcher(
             type: Inbound<ParsedType>,
-            handler: (ParsedType) -> Unit,
-            coroutineScope: CoroutineScope?
+            coroutineScope: CoroutineScope?,
+            handler: (ParsedType) -> Unit
         ): Pair<WatcherID, Builder> {
             val watcherID = UUID.randomUUID()
             watchers.putIfAbsent(type as Inbound<InboundMessage>, ConcurrentLinkedQueue())

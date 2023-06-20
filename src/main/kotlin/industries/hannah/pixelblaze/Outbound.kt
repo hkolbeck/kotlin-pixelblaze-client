@@ -195,29 +195,29 @@ class SetPixelCount(
 }
 
 
-abstract class StringLiteralJsonMessage(private val str: String) : OutboundJsonMessage<String>() {
+abstract class StringLiteralTextMessage(private val str: String) : OutboundJsonMessage<String>() {
     override fun serialize(gson: Gson): String {
         return str
     }
 }
 
-object GetAllPrograms : StringLiteralJsonMessage("""{"listPrograms": true}""") {
+object GetAllPrograms : StringLiteralTextMessage("""{"listPrograms": true}""") {
     override val type = OutboundGetAllPrograms
 }
 
-object NextPattern : StringLiteralJsonMessage("""{"nextProgram": true}""") {
+object NextPattern : StringLiteralTextMessage("""{"nextProgram": true}""") {
     override val type = OutboundNextPattern
 }
 
-object GetPeers : StringLiteralJsonMessage("""{"getPeers": 1}""") {
+object GetPeers : StringLiteralTextMessage("""{"getPeers": 1}""") {
     override val type = OutboundGetPeers
 }
 
-object GetSystemState : StringLiteralJsonMessage("""{"getConfig": true}""") {
+object GetSystemState : StringLiteralTextMessage("""{"getConfig": true}""") {
     override val type = OutboundGetSystemState
 }
 
-object Ping : StringLiteralJsonMessage("""{"ping": true}""") {
+object Ping : StringLiteralTextMessage("""{"ping": true}""") {
     override val type = OutboundPing
 }
 

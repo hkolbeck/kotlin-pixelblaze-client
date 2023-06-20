@@ -25,6 +25,10 @@ fun main() {
     pixelblaze.addWatcher(InboundAck) { _ -> println("Got an ack!") }
 
     while (true) {
+        /**
+         * The ping command takes no arguments, so it's defined statically. Other outbound messages
+         * require fields set.
+         */
         pixelblaze.issueOutbound(Ping)
 
         sleep(3000)
