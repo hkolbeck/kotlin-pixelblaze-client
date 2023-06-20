@@ -166,12 +166,19 @@ specified if no override is provided. Check constructors and method definitions 
 Examples
 -------
 
-A few simple usage examples are offered in the
-[`examples` directory](https://github.com/hkolbeck/kotlin-pixelblaze-client/tree/main/src/main/kotlin/industries/hannah/pixelblaze/examples)
+A few simple usage examples are offered in the 
+[`examples` directory](/src/main/kotlin/industries/hannah/pixelblaze/examples)
+
 
 Advanced Usage
 --------------
 
-See
-[this example](https://github.com/hkolbeck/kotlin-pixelblaze-client/blob/main/src/main/kotlin/industries/hannah/pixelblaze/examples/CustomMessages.kt)
-for how to go about implementing your own types.
+See [this example](/src/main/kotlin/industries/hannah/pixelblaze/examples/CustomMessages.kt) for how to go about
+implementing your own types.
+
+
+Contributing
+------------
+
+Contributions, especially of new inbound and outbound message definitions, is very welcome. The project is governed by
+the [Contributor Covenent](ContributorCovenent.md).
