@@ -44,6 +44,8 @@ abstract class OutboundBinary<R>(
 class OutboundRawBinary(binaryFlag: Byte, canBeSplit: Boolean) : OutboundBinary<ByteArray>(binaryFlag, canBeSplit)
 
 sealed interface OutboundMessage<Context, Msg> {
+    val type: Outbound<out OutboundMessage<Context, Msg>>
+
     fun toFrames(context: Context): List<Frame>?
 }
 
@@ -103,6 +105,7 @@ abstract class OutboundBinaryMessage<Msg> : OutboundMessage<BinarySerializationC
 }
 
 class OutboundRawBinaryMessage(
+    override val type: Outbound<OutboundMessage<BinarySerializationContext, ByteArray>>,
     private val body: ByteArray
 ) : OutboundBinaryMessage<ByteArray>() {
     override fun serialize(): ByteArray {
@@ -119,25 +122,40 @@ abstract class OutboundJsonMessage<M> : OutboundMessage<Gson, M> {
     }
 }
 
-open class RawMapMessage<K>(private val map: Map<K, Any>) :
+abstract class RawMapMessage<K>(private val map: Map<K, Any>) :
     OutboundJsonMessage<Map<String, Any>>() {
+
     override fun serialize(gson: Gson): String = gson.toJson(map)
 }
 
-open class TrivialJsonMessage<V>(key: String, value: V) :
+abstract class TrivialJsonMessage<V>(key: String, value: V) :
     OutboundJsonMessage<Map<String, V>>() {
     private val body = mapOf(Pair(key, value))
 
-    override fun serialize(gson: Gson): String =  gson.toJson(body)
+    override fun serialize(gson: Gson): String = gson.toJson(body)
 }
 
-class GetPlaylist(id: String) : TrivialJsonMessage<String>("getPlaylist", id)
-class SetPlaylistPosition(position: UInt) : TrivialJsonMessage<Int>("position", position.toInt())
-class GetPatternControls(id: String) : TrivialJsonMessage<String>("patternId", id)
-class GetPreviewImage(id: String) : TrivialJsonMessage<String>("patternId", id)
-class SetSendUpdates(sendUpdates: Boolean) : TrivialJsonMessage<Boolean>("sendUpdates", sendUpdates)
+class GetPlaylist(id: String) : TrivialJsonMessage<String>("getPlaylist", id) {
+    override val type = OutboundGetPlaylist
+}
 
-open class SaveOptionalSet<V>(key: String, value: V, save: Boolean) : OutboundJsonMessage<Map<String, Any>>() {
+class SetPlaylistPosition(position: UInt) : TrivialJsonMessage<Int>("position", position.toInt()) {
+    override val type = OutboundSetPlaylistPosition
+}
+
+class GetPatternControls(id: String) : TrivialJsonMessage<String>("patternId", id) {
+    override val type = OutboundGetPatternControls
+}
+
+class GetPreviewImage(id: String) : TrivialJsonMessage<String>("patternId", id) {
+    override val type = OutboundGetPreviewImage
+}
+
+class SetSendUpdates(sendUpdates: Boolean) : TrivialJsonMessage<Boolean>("sendUpdates", sendUpdates) {
+    override val type = OutboundSetSendUpdates
+}
+
+abstract class SaveOptionalSet<V>(key: String, value: V, save: Boolean) : OutboundJsonMessage<Map<String, Any>>() {
     private val body = mapOf(
         Pair(key, value),
         Pair("save", save)
@@ -151,35 +169,57 @@ open class SaveOptionalSet<V>(key: String, value: V, save: Boolean) : OutboundJs
 class SetCurrentPatternControls(
     controls: Map<String, Float>,
     saveToFlash: Boolean
-) : SaveOptionalSet<Map<String, Float>>("controls", controls, saveToFlash)
+) : SaveOptionalSet<Map<String, Float>>("controls", controls, saveToFlash) {
+    override val type = OutboundSetCurrentPatternControls
+}
 
 class SetBrightness(
     brightness: Float,
     saveToFlash: Boolean
-) : SaveOptionalSet<Float>("brightness", brightness, saveToFlash)
+) : SaveOptionalSet<Float>("brightness", brightness, saveToFlash) {
+    override val type = OutboundSetBrightness
+}
 
 class SetMaxBrightness(
     brightness: Float,
     saveToFlash: Boolean
-) : SaveOptionalSet<Int>("maxBrightness", (brightness.coerceIn(0f, 1f) * 255).roundToInt(), saveToFlash)
+) : SaveOptionalSet<Int>("maxBrightness", (brightness.coerceIn(0f, 1f) * 255).roundToInt(), saveToFlash) {
+    override val type = OutboundSetMaxBrightness
+}
 
 class SetPixelCount(
     pixelCount: UInt,
     saveToFlash: Boolean
-) : SaveOptionalSet<Int>("pixelCount", pixelCount.toInt(), saveToFlash)
+) : SaveOptionalSet<Int>("pixelCount", pixelCount.toInt(), saveToFlash) {
+    override val type = OutboundSetPixelCount
+}
 
 
-open class StringLiteralJsonMessage(private val str: String) : OutboundJsonMessage<String>() {
+abstract class StringLiteralJsonMessage(private val str: String) : OutboundJsonMessage<String>() {
     override fun serialize(gson: Gson): String {
         return str
     }
 }
 
-object GetAllPrograms : StringLiteralJsonMessage("""{"listPrograms": true}""")
-object NextPattern : StringLiteralJsonMessage("""{"nextProgram": true}""")
-object GetPeers : StringLiteralJsonMessage("""{"getPeers": 1}""")
-object GetSystemState : StringLiteralJsonMessage("""{"getConfig": true}""")
-object Ping : StringLiteralJsonMessage("""{"ping": true}""")
+object GetAllPrograms : StringLiteralJsonMessage("""{"listPrograms": true}""") {
+    override val type = OutboundGetAllPrograms
+}
+
+object NextPattern : StringLiteralJsonMessage("""{"nextProgram": true}""") {
+    override val type = OutboundNextPattern
+}
+
+object GetPeers : StringLiteralJsonMessage("""{"getPeers": 1}""") {
+    override val type = OutboundGetPeers
+}
+
+object GetSystemState : StringLiteralJsonMessage("""{"getConfig": true}""") {
+    override val type = OutboundGetSystemState
+}
+
+object Ping : StringLiteralJsonMessage("""{"ping": true}""") {
+    override val type = OutboundPing
+}
 
 
 

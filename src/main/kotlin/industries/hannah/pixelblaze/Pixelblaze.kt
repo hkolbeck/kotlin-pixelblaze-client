@@ -14,17 +14,15 @@ typealias ScheduledMessageId = UUID
 
 interface Pixelblaze : Closeable {
 
-    fun <Out, Wrapper : OutboundMessage<*, Out>> issueOutbound(type: Outbound<Wrapper>, msg: Wrapper): Boolean
+    fun <Out, Wrapper : OutboundMessage<*, Out>> issueOutbound(msg: Wrapper): Boolean
 
     suspend fun <Out, Wrapper : OutboundMessage<*, Out>, Resp : InboundMessage> issueOutboundAndWait(
-        outboundType: Outbound<Wrapper>,
         msg: Wrapper,
         inboundType: Inbound<Resp>,
         maxWait: Duration
     ): Resp?
 
     fun <Out, Wrapper : OutboundMessage<*, Out>> repeatOutbound(
-        type: Outbound<Wrapper>,
         msgGenerator: () -> Wrapper,
         interval: Duration,
         initialDelay: Duration = interval
@@ -33,7 +31,6 @@ interface Pixelblaze : Closeable {
     fun cancelRepeatedOutbound(id: ScheduledMessageId): Boolean
 
     fun <T, Out, Wrapper : OutboundMessage<*, Out>> saveAfter(
-        type: Outbound<Wrapper>,
         wrapperBuilder: (T, Boolean) -> Wrapper,
         saveAfter: Duration
     ): SendChannel<T>

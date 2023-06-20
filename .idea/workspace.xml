@@ -4,17 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="bac320fe-f3d8-48cb-8294-7d2b1eca689a" name="Changes" comment="Add default builder and client">
-      <change afterPath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/examples/BasicClientUsage.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/examples/CustomInboundMessage.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/examples/CustomOutboundMessage.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/examples/HandlingPatternChanges.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/examples/LiveBrightnessUpdate.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/examples/ScheduledMessages.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+    <list default="true" id="bac320fe-f3d8-48cb-8294-7d2b1eca689a" name="Changes" comment="Bit of cleanup, add ability to dispatch watchers on provided coroutine scope. Start adding examples.">
       <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/Outbound.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/Outbound.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/Pixelblaze.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/Pixelblaze.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/WebsocketPixelblaze.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/WebsocketPixelblaze.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/examples/BasicClientUsage.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/examples/BasicClientUsage.kt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -75,7 +69,7 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1686884861554</updated>
-      <workItem from="1686884863004" duration="162078000" />
+      <workItem from="1686884863004" duration="163550000" />
     </task>
     <task id="LOCAL-00001" summary="lol git">
       <created>1686965358941</created>
@@ -140,7 +134,14 @@
       <option name="project" value="LOCAL" />
       <updated>1687149493859</updated>
     </task>
-    <option name="localTasksCounter" value="10" />
+    <task id="LOCAL-00010" summary="Bit of cleanup, add ability to dispatch watchers on provided coroutine scope. Start adding examples.">
+      <created>1687219687522</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1687219687522</updated>
+    </task>
+    <option name="localTasksCounter" value="11" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -167,6 +168,7 @@
     <MESSAGE value="Implement interface in websocket client" />
     <MESSAGE value="Polish off impl" />
     <MESSAGE value="Add default builder and client" />
-    <option name="LAST_COMMIT_MESSAGE" value="Add default builder and client" />
+    <MESSAGE value="Bit of cleanup, add ability to dispatch watchers on provided coroutine scope. Start adding examples." />
+    <option name="LAST_COMMIT_MESSAGE" value="Bit of cleanup, add ability to dispatch watchers on provided coroutine scope. Start adding examples." />
   </component>
 </project>

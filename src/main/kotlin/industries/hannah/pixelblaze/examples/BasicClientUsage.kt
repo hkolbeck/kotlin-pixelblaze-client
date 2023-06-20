@@ -25,7 +25,7 @@ fun main() {
     pixelblaze.addWatcher(InboundAck) { _ -> println("Got an ack!") }
 
     while (true) {
-        pixelblaze.issueOutbound(OutboundPing, Ping)
+        pixelblaze.issueOutbound(Ping)
 
         sleep(3000)
     }

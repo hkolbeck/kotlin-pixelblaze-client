@@ -43,14 +43,14 @@ class WebsocketPixelblaze internal constructor(
     saveAfterDispatcher: CoroutineDispatcher,
     cronDispatcher: CoroutineDispatcher
 ) : Pixelblaze {
-    private val outboundQueue: BlockingQueue<OutboundMessageWrapper<*>> =
+    private val outboundQueue: BlockingQueue<OutboundMessage<*, *>> =
         ArrayBlockingQueue(config.outboundQueueDepth)
     private val saveAfterJobs: ConcurrentMap<SaveAfterID, Job> = ConcurrentHashMap()
     private val cronMessages: ConcurrentMap<ScheduledMessageId, Job> = ConcurrentHashMap()
 
-    private val ioLoopDispatcher = CoroutineScope(ioLoopDispatcher)
-    private val saveAfterDispatcher = CoroutineScope(saveAfterDispatcher)
-    private val cronDispatcher = CoroutineScope(cronDispatcher)
+    private val ioLoopScope = CoroutineScope(ioLoopDispatcher)
+    private val saveAfterScope = CoroutineScope(saveAfterDispatcher)
+    private val cronScope = CoroutineScope(cronDispatcher)
 
     private val binaryFrames: ArrayDeque<InputStream> = ArrayDeque(config.inboundBufferQueueDepth)
     private var activeMessageType: InboundBinary<*>? = null
@@ -68,11 +68,6 @@ class WebsocketPixelblaze internal constructor(
         val parseFn: (InputStream) -> Message?
     )
 
-    internal data class OutboundMessageWrapper<Message>(
-        val type: Outbound<Message>,
-        val message: Message
-    )
-
     internal data class ScheduledMessage<Message>(
         val type: Outbound<Message>,
         val messageGenerator: () -> Message,
@@ -87,8 +82,7 @@ class WebsocketPixelblaze internal constructor(
         val coroutineScope: CoroutineScope?
     )
 
-    private val smallTaskCoroutines = CoroutineScope(Dispatchers.Default)
-    private val connectionHandler: Job = CoroutineScope(Dispatchers.IO).async {
+    private val connectionHandler: Job = ioLoopScope.async {
         var retry = 1u
         while (isActive) {
             try {
@@ -110,14 +104,12 @@ class WebsocketPixelblaze internal constructor(
     }
 
     override fun <Out, Wrapper : OutboundMessage<*, Out>> issueOutbound(
-        type: Outbound<Wrapper>,
         msg: Wrapper
     ): Boolean {
-        return outboundQueue.offer(OutboundMessageWrapper(type, msg))
+        return outboundQueue.offer(msg)
     }
 
     override suspend fun <Out, Wrapper : OutboundMessage<*, Out>, Resp : InboundMessage> issueOutboundAndWait(
-        outboundType: Outbound<Wrapper>,
         msg: Wrapper,
         inboundType: Inbound<Resp>,
         maxWait: Duration
@@ -134,7 +126,7 @@ class WebsocketPixelblaze internal constructor(
             }
 
             id = addWatcher(inboundType, watchFn)
-            issueOutbound(outboundType, msg)
+            issueOutbound(msg)
         }
     }
 
@@ -146,17 +138,16 @@ class WebsocketPixelblaze internal constructor(
     }
 
     override fun <Out, Wrapper : OutboundMessage<*, Out>> repeatOutbound(
-        type: Outbound<Wrapper>,
         msgGenerator: () -> Wrapper,
         interval: Duration,
         initialDelay: Duration
     ): ScheduledMessageId {
         val scheduleId = UUID.randomUUID()
 
-        cronMessages[scheduleId] = smallTaskCoroutines.async {
+        cronMessages[scheduleId] = cronScope.async {
             delay(initialDelay)
             while (isActive) {
-                issueOutbound(type, msgGenerator())
+                issueOutbound(msgGenerator())
                 delay(interval)
             }
         }
@@ -170,13 +161,12 @@ class WebsocketPixelblaze internal constructor(
     }
 
     override fun <T, Out, Wrapper : OutboundMessage<*, Out>> saveAfter(
-        type: Outbound<Wrapper>,
         wrapperBuilder: (T, Boolean) -> Wrapper,
         saveAfter: Duration
     ): SendChannel<T> {
         val jobId = UUID.randomUUID()
         val channel = Channel<T>(config.saveAfterWriteBufferSize)
-        saveAfterJobs[jobId] = smallTaskCoroutines.async {
+        saveAfterJobs[jobId] = saveAfterScope.async {
             var last: T? = null
             var lastSaved: T? = null
             var lastSaveAt: Instant? = null
@@ -209,7 +199,7 @@ class WebsocketPixelblaze internal constructor(
                         }
 
                         val message = wrapperBuilder(this, save)
-                        if (!issueOutbound(type, message)) {
+                        if (!issueOutbound(message)) {
                             errorLog("Enqueue of non-save request failed for saveAfter()", null)
                         }
                     } ?: run {
@@ -217,7 +207,7 @@ class WebsocketPixelblaze internal constructor(
                             lastSaved = last
                             lastSaveAt = Instant.now()
                             val message = wrapperBuilder(last!!, true)
-                            if (!issueOutbound(type, message)) {
+                            if (!issueOutbound(message)) {
                                 errorLog("Enqueue of save request failed for saveAfter()", null)
                             }
                         }
@@ -331,7 +321,7 @@ class WebsocketPixelblaze internal constructor(
                 }
 
                 outboundQueue.poll()?.run {
-                    sendOutboundMessage(this as OutboundMessageWrapper<OutboundMessage<Any, *>>, outgoing)
+                    sendOutboundMessage(this as OutboundMessage<Any, *>, outgoing)
                     workDone = true
                 }
 
@@ -452,19 +442,22 @@ class WebsocketPixelblaze internal constructor(
     }
 
     private suspend fun sendOutboundMessage(
-        message: OutboundMessageWrapper<OutboundMessage<Any, *>>,
+        message: OutboundMessage<Any, *>,
         outgoing: SendChannel<Frame>
     ) {
         val context: Any = when (message.type) {
             is OutboundText<*> -> gson
-            is OutboundBinary<*> -> BinarySerializationContext(
-                config.outboundFrameSize,
-                message.type.binaryFlag,
-                message.type.canBeSplit
-            )
+            is OutboundBinary<*> -> {
+                val binaryType = message.type as OutboundBinary<*>
+                BinarySerializationContext(
+                    config.outboundFrameSize,
+                    binaryType.binaryFlag,
+                    binaryType.canBeSplit
+                )
+            }
         }
 
-        val frames = message.message.toFrames(context) ?: return
+        val frames = message.toFrames(context) ?: return
         for (frame in frames) {
             outgoing.send(frame)
         }
