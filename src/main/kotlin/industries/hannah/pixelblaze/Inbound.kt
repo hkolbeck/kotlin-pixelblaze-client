@@ -3,6 +3,7 @@ package industries.hannah.pixelblaze
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import io.ktor.websocket.*
+import java.awt.Image
 import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
 import java.io.DataInputStream
@@ -436,7 +437,6 @@ data class PreviewImage(
                 read = stream.read()
             }
 
-
             return try {
                 PreviewImage(String(imageIdBuffer.toByteArray()), ImageIO.read(stream))
             } catch (t: Throwable) {
@@ -450,7 +450,9 @@ data class Pixel(
     val red: UByte,
     val green: UByte,
     val blue: UByte
-)
+) {
+    fun toInt(): Int = (red.toInt() shl 16) or (green.toInt() shl 8) or blue.toInt()
+}
 
 //Per creator
 const val PREVIEW_FRAME_MAX_LEN = 1024
@@ -458,6 +460,15 @@ const val PREVIEW_FRAME_MAX_LEN = 1024
 data class PreviewFrame(
     val pixels: List<Pixel>
 ) : InboundMessage {
+
+    fun to_image(width: UInt, height: UInt): Image {
+        val buffer = pixels.map { it.toInt() }.toIntArray()
+        val image = BufferedImage(width.toInt(), height.toInt(), BufferedImage.TYPE_INT_ARGB)
+        image.setRGB(0, 0, buffer.size, 1, buffer, 0, 1)
+
+        return image.getScaledInstance(width.toInt(), height.toInt(), Image.SCALE_FAST)
+    }
+
     companion object {
         fun fromBinary(stream: InputStream): PreviewFrame? {
             val pixels = ArrayList<Pixel>(PREVIEW_FRAME_MAX_LEN)

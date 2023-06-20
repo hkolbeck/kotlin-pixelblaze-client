@@ -31,7 +31,7 @@ class WebsocketPixelblaze internal constructor(
     private val port: Int,
     private val watchers: ConcurrentMap<Inbound<InboundMessage>, ConcurrentLinkedQueue<Watcher<InboundMessage>>>,
     private val textParsers: PriorityBlockingQueue<TextParser<*>>,
-    private val binaryParsers: ConcurrentMap<InboundBinary<*>, SerialParser<*>>,
+    private val binaryParsers: ConcurrentMap<Byte, SerialParser<*>>,
     private val connectionWatcher: (ConnectionEvent, String?, Throwable?) -> Unit,
     private val config: PixelblazeConfig,
     private val gson: Gson,
@@ -257,7 +257,7 @@ class WebsocketPixelblaze internal constructor(
         parserFn: (InputStream) -> ParsedType?
     ): ParserID {
         val id = UUID.randomUUID()
-        binaryParsers[msgType] = SerialParser(id, msgType, parserFn)
+        binaryParsers[msgType.binaryFlag] = SerialParser(id, msgType, parserFn)
         return id
     }
 
@@ -352,7 +352,7 @@ class WebsocketPixelblaze internal constructor(
             is Frame.Binary -> {
                 readBinaryFrame(frame)?.run {
                     val message = this
-                    binaryParsers[message.first]?.run {
+                    binaryParsers[message.first.binaryFlag]?.run {
                         val parser = this
                         parser.parseFn(message.second)?.run {
                             Pair(parser.type, this)
@@ -372,13 +372,13 @@ class WebsocketPixelblaze internal constructor(
             val typeFlag = frame.data[0]
             if (typeFlag >= 0) {
                 if (typeFlag == InboundPreviewFrame.binaryFlag) { //Preview frames are never split
-                    return if (binaryParsers.containsKey(InboundPreviewFrame)) {
+                    return if (binaryParsers.containsKey(InboundPreviewFrame.binaryFlag)) {
                         Pair(InboundPreviewFrame, frame.readBytes().inputStream(1, frame.data.size))
                     } else {
                         null
                     }
                 } else {
-                    if (!binaryParsers.containsKey(InboundRawBinary<InboundMessage>(typeFlag))) {
+                    if (!binaryParsers.containsKey(typeFlag)) {
                         return null
                     }
 
@@ -482,7 +482,7 @@ class WebsocketPixelblaze internal constructor(
             ConcurrentHashMap()
         private val textParsers: PriorityBlockingQueue<TextParser<*>> =
             PriorityBlockingQueue(16) { a, b -> a.priority - b.priority }
-        private val binaryParsers: ConcurrentMap<InboundBinary<*>, SerialParser<*>> = ConcurrentHashMap()
+        private val binaryParsers: ConcurrentMap<Byte, SerialParser<*>> = ConcurrentHashMap()
         private val gsonBuilder: GsonBuilder = GsonBuilder()
 
         private var ioLoopDispatcher: CoroutineDispatcher = Dispatchers.IO
@@ -525,7 +525,7 @@ class WebsocketPixelblaze internal constructor(
             parseFn: (InputStream) -> Message?
         ): Pair<ParserID, Builder> {
             val parserID = UUID.randomUUID()
-            binaryParsers[type] = SerialParser(parserID, type, parseFn)
+            binaryParsers[type.binaryFlag] = SerialParser(parserID, type, parseFn)
             return Pair(parserID, this)
         }
 
