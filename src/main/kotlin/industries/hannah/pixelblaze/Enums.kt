@@ -34,6 +34,12 @@ enum class BinaryTypeFlag(val typeVal: Byte) {
             }
         }
     }
+
+    override fun toString(): String {
+        return "${this.name}($typeVal)"
+    }
+
+
 }
 
 enum class FramePosition(val typeVal: Byte) {

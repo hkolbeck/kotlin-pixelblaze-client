@@ -49,40 +49,43 @@ class PixelblazeStateCache(
     init {
         //First, we need to both set watchers and arrange scheduled requests for those endpoints that require it
         if (!excludedOutboundTypes.contains(OutboundGetPeers)) {
-            watcherIds.add(pixelblaze.addWatcher(InboundPeers) { peersHolder.set(it) })
-            scheduleIds.add(pixelblaze.repeatOutbound({ GetPeers }, refreshRates.peers, Duration.ZERO))
+            watcherIds.add(pixelblaze.addWatcher("State cache peers", InboundPeers) { peersHolder.set(it) })
+            scheduleIds.add(pixelblaze.repeatOutbound(refreshRates.peers, Duration.ZERO) { GetPeers })
         }
 
         if (!excludedOutboundTypes.contains(OutboundGetSystemState)) {
-            watcherIds.add(pixelblaze.addWatcher(InboundSettings) { settingsHolder.set(it) })
+            watcherIds.add(pixelblaze.addWatcher("State cache settings", InboundSettings) { settingsHolder.set(it) })
             watcherIds.add(pixelblaze.addWatcher(InboundExpanderChannels) { expanderChannelsHolder.set(it) })
             // This also requests a sequencer state, but we want to watch that no matter what
-            scheduleIds.add(pixelblaze.repeatOutbound({ GetSystemState }, refreshRates.systemState, Duration.ZERO))
+            scheduleIds.add(pixelblaze.repeatOutbound(refreshRates.systemState, Duration.ZERO) { GetSystemState })
         }
 
         if (!excludedOutboundTypes.contains(OutboundGetAllPrograms)) {
-            watcherIds.add(pixelblaze.addWatcher(InboundAllPrograms) { it ->
+            watcherIds.add(pixelblaze.addWatcher("State cache all programs", InboundAllPrograms) { it ->
                 allPatternsHolder.set(it.patterns.associate {
                     Pair(it.id, it.name)
                 })
             })
-            scheduleIds.add(pixelblaze.repeatOutbound({ GetAllPrograms }, refreshRates.allPatterns, Duration.ZERO))
+            scheduleIds.add(pixelblaze.repeatOutbound(refreshRates.allPatterns, Duration.ZERO) { GetAllPrograms })
         }
 
         if (!excludedOutboundTypes.contains(OutboundGetPlaylist)) {
-            watcherIds.add(pixelblaze.addWatcher(InboundPlaylist) { currPlaylistHolder.set(it) })
+            watcherIds.add(pixelblaze.addWatcher("State cache get playlist", InboundPlaylist) {
+                currPlaylistHolder.set(it)
+            })
             scheduleIds.add(
                 pixelblaze.repeatOutbound(
-                    { GetPlaylist(Pixelblaze.DEFAULT_PLAYLIST) },
                     refreshRates.currPlaylist,
                     Duration.ZERO
-                )
+                ) { GetPlaylist(Pixelblaze.DEFAULT_PLAYLIST) }
             )
         }
 
         //Finally we record the ones that just come on their own
-        watcherIds.add(pixelblaze.addWatcher(InboundSequencerState) { seqStateHolder.set(it) })
-        watcherIds.add(pixelblaze.addWatcher(InboundStats) { statsHolder.set(it) })
+        watcherIds.add(pixelblaze.addWatcher("State cache sequencer state", InboundSequencerState) {
+            seqStateHolder.set(it)
+        })
+        watcherIds.add(pixelblaze.addWatcher("State cache stats", InboundStats) { statsHolder.set(it) })
     }
 
     suspend fun awaitFill(maxWait: Duration, awaitExpanders: Boolean = false): Boolean {
@@ -96,7 +99,8 @@ class PixelblazeStateCache(
                 statsHolder.get() == null ||
                 (awaitExpanders && expanderChannelsHolder.get() == null)
             ) {
-                println("""
+                println(
+                    """
                     allPatternsHolder = ${allPatternsHolder.get() == null}
                     currPlaylistHolder = ${currPlaylistHolder.get() == null}
                     seqStateHolder = ${seqStateHolder.get() == null}
@@ -104,7 +108,8 @@ class PixelblazeStateCache(
                     settingsHolder = ${settingsHolder.get() == null}
                     statsHolder = ${statsHolder.get() == null}
                     expanderChannelsHolder = ${expanderChannelsHolder.get() == null}
-                """.trimIndent())
+                """.trimIndent()
+                )
 
                 delay(1000.milliseconds)
             }
@@ -159,10 +164,10 @@ class PixelblazeStateCache(
         if (isClosed()) {
             throw IllegalStateException("Attempt to read from a closed state cache instance")
         }
-        
+
         return t
     }
-    
+
     fun isClosed(): Boolean {
         return closeCalled.get()
     }

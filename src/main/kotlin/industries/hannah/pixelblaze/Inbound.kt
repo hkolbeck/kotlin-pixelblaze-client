@@ -33,12 +33,18 @@ abstract class InboundBinary<T : InboundMessage>(val binaryFlag: Byte) : Inbound
         result = 31 * result + frameType.hashCode()
         return result
     }
+
+    override fun toString(): String = this.javaClass.name
 }
 
 object InboundPreviewImage : InboundBinary<PreviewImage>(4)
-object InboundPreviewFrame : InboundBinary<PreviewFrame>(5)
-object InboundAllPrograms : InboundBinary<AllPrograms>(7)
-object InboundExpanderChannels : InboundBinary<ExpanderChannels>(9)
+
+object InboundPreviewFrame : InboundBinary<PreviewFrame>(5) 
+
+object InboundAllPrograms : InboundBinary<AllPrograms>(7) 
+
+object InboundExpanderChannels : InboundBinary<ExpanderChannels>(9) 
+
 class InboundRawBinary<T : InboundMessage>(binaryFlag: Byte) : InboundBinary<T>(binaryFlag)
 
 
@@ -59,16 +65,18 @@ abstract class InboundText<T : InboundMessage>(val extractedType: Type) : Inboun
         result = 31 * result + frameType.hashCode()
         return result
     }
+
+    override fun toString(): String = this.javaClass.name
 }
 
-object InboundStats : InboundText<Stats>(Stats::class.java)
-object InboundSequencerState : InboundText<SequencerState>(SequencerState::class.java)
-object InboundSettings : InboundText<Settings>(Settings::class.java)
-object InboundPeers : InboundText<Peers>(Peers::class.java)
-object InboundPlaylist : InboundText<Playlist>(Playlist::class.java)
-object InboundPlaylistUpdate : InboundText<PlaylistUpdate>(PlaylistUpdate::class.java)
-object InboundAck : InboundText<Ack>(Ack::class.java)
-class InboundParsedText<T : InboundMessage>(extractedType: Type) : InboundText<T>(extractedType)
+object InboundStats : InboundText<Stats>(Stats::class.java) 
+object InboundSequencerState : InboundText<SequencerState>(SequencerState::class.java) 
+object InboundSettings : InboundText<Settings>(Settings::class.java) 
+object InboundPeers : InboundText<Peers>(Peers::class.java) 
+object InboundPlaylist : InboundText<Playlist>(Playlist::class.java) 
+object InboundPlaylistUpdate : InboundText<PlaylistUpdate>(PlaylistUpdate::class.java) 
+object InboundAck : InboundText<Ack>(Ack::class.java) 
+class InboundParsedText<T : InboundMessage>(extractedType: Type) : InboundText<T>(extractedType) 
 
 interface InboundMessage
 

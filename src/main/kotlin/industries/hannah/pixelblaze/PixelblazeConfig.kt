@@ -6,7 +6,7 @@ import kotlin.time.toDuration
 
 class PixelblazeConfig(
     requestQueueDepth: UInt = 50u,
-    inboundBufferQueueDepth: UInt =  10u,
+    inboundBufferQueueDepth: UInt = 10u,
     outboundFrameSize: UInt = 1024u,
     saveAfterWriteBufferSize: UInt = 10u,
     val sleepOnNothingToDo: Duration = 10.toDuration(DurationUnit.MILLISECONDS),
@@ -21,5 +21,16 @@ class PixelblazeConfig(
 
     companion object {
         fun default(): PixelblazeConfig = PixelblazeConfig()
+    }
+
+    fun toFormattedString(): String {
+        return """
+            |PixelblazeConfig(
+            |    sleepOnNothingToDo=$sleepOnNothingToDo
+            |    inboundBufferQueueDepth=$inboundBufferQueueDepth
+            |    outboundQueueDepth=$outboundQueueDepth
+            |    outboundFrameSize=$outboundFrameSize
+            |    saveAfterWriteBufferSize=$saveAfterWriteBufferSize
+            |)""".trimMargin()
     }
 }

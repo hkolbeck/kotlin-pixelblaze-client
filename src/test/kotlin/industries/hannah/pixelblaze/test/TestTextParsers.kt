@@ -45,7 +45,7 @@ class TestTextParsers {
 {"name":"Pixelblaze_682855","brandName":"","pixelCount":100,"brightness":1,"maxBrightness":10,"colorOrder":"BGR","dataSpeed":3500000,"ledType":2,"sequenceTimer":15,"transitionDuration":0,"sequencerMode":2,"runSequencer":true,"simpleUiMode":false,"learningUiMode":false,"discoveryEnable":true,"timezone":"","autoOffEnable":false,"autoOffStart":"00:00","autoOffEnd":"00:00","cpuSpeed":240,"networkPowerSave":false,"mapperFit":0,"leaderId":0,"nodeId":0,"soundSrc":0,"accelSrc":0,"lightSrc":0,"analogSrc":0,"exp":0,"ver":"3.40","chipId":6826069}
         """
         val expected = Settings(
-            name = "",
+            typeName = "",
             brandName = "",
             pixelCount = 0,
             brightness = 0.0f,

@@ -74,9 +74,9 @@ interface Pixelblaze : Closeable {
      * @return an id that can be used to later cancel the scheduled message
      */
     fun <Out, Wrapper : OutboundMessage<*, Out>> repeatOutbound(
-        msgGenerator: () -> Wrapper,
         interval: Duration,
-        initialDelay: Duration = interval
+        initialDelay: Duration = interval,
+        msgGenerator: () -> Wrapper
     ): ScheduledMessageId
 
     /**
@@ -157,10 +157,8 @@ interface Pixelblaze : Closeable {
      * Remove all watchers for a given type
      *
      * @param the type to remove
-     *
-     * @return a list of watcher IDs removed
      */
-    fun removeWatchersForType(type: Inbound<*>): List<WatcherID>
+    fun removeWatchersForType(type: Inbound<*>)
 
     /**
      * Adds a parser to the inbound text parser chain. They're tried in priority order, from low to high. If multiple

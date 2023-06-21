@@ -83,26 +83,38 @@ class WebsocketPixelblaze internal constructor(
 
     private val connectionHandler: Job = ioLoopScope.async {
         debugLog {
+            val watchersBuilder = StringBuilder()
+            watchers.entries.forEach { (type, typeWatchers) ->
+                watchersBuilder.append("\t${type.javaClass.canonicalName}\n")
+                typeWatchers.forEach { watchersBuilder.append("\t\t${it.name}\n") }
+                watchersBuilder.append('\n')
+            }
+
+            val binaryParsersBuilder = StringBuilder()
+            binaryParsers.forEach { (type, parser) ->
+                binaryParsersBuilder.append("\t${BinaryTypeFlag.fromByte(type)}: ${parser.name}\n")
+            }
+
+            val textParsersBuilder = StringBuilder()
+            textParsers.forEach { parser ->
+                textParsersBuilder.append("\t${parser.type.javaClass.canonicalName}: ${parser.name}\n")
+            }
+
             """
-            Entering main loop connecting to $address:$port
-            Config: $config
-            Watchers: ${
-                watchers.entries.map { (type, typeWatchers) ->
-                    "${type.javaClass}: ${typeWatchers.size}"
-                }.fold("\t") { acc, v -> "$acc\n\t$v" }
-            }
-            
-            Binary Parsers: 
-            ${
-                binaryParsers.entries.map { (t, p) -> "${p.id}: ${BinaryTypeFlag.fromByte(t)}  ${p.javaClass}" }
-                    .fold("\t") { acc, v -> "$acc\n\t$v" }
-            }
-            
-            Text Parsers: 
-            ${
-                textParsers.map { "${it.id}: \t${it.type.extractedType} ${it.priority}" }
-            }
-        """.trimIndent()
+            |Entering main Pixelblaze loop, connecting to $address:$port
+            |
+            |Config:
+            |${config.toFormattedString()}
+            |
+            |Watchers: 
+            |$watchersBuilder
+            |
+            |Binary Parsers: 
+            |$binaryParsersBuilder
+            |
+            |Text Parsers: 
+            |$textParsersBuilder
+        """.trimMargin()
         }
 
         var retry = 1u
@@ -133,6 +145,7 @@ class WebsocketPixelblaze internal constructor(
     override fun <Out, Wrapper : OutboundMessage<*, Out>> sendOutbound(
         msg: Wrapper
     ): Boolean {
+        debugLog { "sendOutbound(msg = ${msg}: ${msg.javaClass.canonicalName})" }
         return outboundQueue.offer(msg)
     }
 
@@ -142,6 +155,9 @@ class WebsocketPixelblaze internal constructor(
         maxWait: Duration,
         isMine: (Resp) -> Boolean
     ): Resp? {
+        debugLog {
+            "issueOutboundAndWait(msg = ${msg}: ${msg.javaClass.canonicalName}, inboundType = ${inboundType}, maxWait = $maxWait, <Predicate>)"
+        }
         val guard = AtomicBoolean(false)
         var id: WatcherID? = null
 
@@ -170,10 +186,14 @@ class WebsocketPixelblaze internal constructor(
     }
 
     override fun <Out, Wrapper : OutboundMessage<*, Out>> repeatOutbound(
-        msgGenerator: () -> Wrapper,
         interval: Duration,
-        initialDelay: Duration
+        initialDelay: Duration,
+        msgGenerator: () -> Wrapper
     ): ScheduledMessageId {
+        debugLog {
+            "repeatOutbound(interval = $interval, initialDelay = $initialDelay, <Generator>)"
+        }
+
         val scheduleId = UUID.randomUUID()
 
         cronMessages[scheduleId] = cronScope.async {
@@ -189,11 +209,17 @@ class WebsocketPixelblaze internal constructor(
             }
         }
 
+        debugLog { "Added repeated outbound $scheduleId. There are now ${cronMessages.size} scheduled messages" }
         return scheduleId
     }
 
     override fun cancelRepeatedOutbound(id: ScheduledMessageId): Boolean {
-        cronMessages.remove(id)?.cancel() ?: return false
+        debugLog { "cancelRepeatedOutbound(id = $id)" }
+
+        val removed = cronMessages.remove(id)
+        debugLog { "Cancelling repeated outbound $id. There are now ${cronMessages.size} scheduled messages" }
+
+        removed?.cancel() ?: return false
         return true
     }
 
@@ -201,6 +227,8 @@ class WebsocketPixelblaze internal constructor(
         saveAfter: Duration,
         wrapperBuilder: (T, Boolean) -> Wrapper
     ): SendChannel<T> {
+        debugLog { "saveAfter(saveAfter = $saveAfter, <Builder>)" }
+
         val jobId = UUID.randomUUID()
         val channel = Channel<T>(config.saveAfterWriteBufferSize)
         saveAfterJobs[jobId] = saveAfterScope.async {
@@ -261,6 +289,7 @@ class WebsocketPixelblaze internal constructor(
             saveAfterJobs.remove(jobId)
         }
 
+        debugLog { "Added saveAfter task $jobId, there are now ${saveAfterJobs.size} ongoing" }
         return channel
     }
 
@@ -283,23 +312,32 @@ class WebsocketPixelblaze internal constructor(
         coroutineScope: CoroutineScope?,
         handler: (ParsedType) -> Unit
     ): WatcherID {
+        debugLog {
+            "addWatcherHelper(name = $name, type = $type, coroutineScope = ${coroutineScope?.run { "<CoroutineScope>" } ?: "null"}, <Handler>)"
+        }
+
         val watcherID = UUID.randomUUID()
         watchers.putIfAbsent(type as Inbound<InboundMessage>, ConcurrentLinkedQueue())
-        watchers[type]!!.add(
-            Watcher(
-                watcherName(watcherID, name, type),
-                watcherID, handler as (InboundMessage) -> Unit, coroutineScope
-            )
+        val watcher = Watcher(
+            watcherName(watcherID, name, type),
+            watcherID, handler as (InboundMessage) -> Unit, coroutineScope
         )
+        watchers[type]!!.add(watcher)
+
+        debugLog { "Adding watcher ${watcher.name} for type $type, there are now ${watchers[type]!!.size}" }
         return watcherID
     }
 
     override fun removeWatcher(id: WatcherID): Boolean {
+        debugLog { "removeWatcher(id = $id)" }
+
         return watchers.any { (_, list) -> list.removeIf { watcher -> watcher.id == id } }
     }
 
-    override fun removeWatchersForType(type: Inbound<*>): List<WatcherID> =
-        watchers.remove(type)?.map { it.id } ?: listOf()
+    override fun removeWatchersForType(type: Inbound<*>) {
+        debugLog { "removeWatchersForType(type = $type)" }
+        watchers[type]?.clear()
+    }
 
     override fun <ParsedType : InboundMessage> addTextParser(
         name: String?,
@@ -307,6 +345,8 @@ class WebsocketPixelblaze internal constructor(
         msgType: InboundText<ParsedType>,
         parseFn: (Gson, String) -> ParsedType?
     ): ParserID {
+        debugLog { "addTextParser(name = $name, priority = ${priority}, msgType = $msgType, <Parse>)" }
+
         val id = UUID.randomUUID()
         textParsers.add(
             TextParser(
@@ -317,6 +357,8 @@ class WebsocketPixelblaze internal constructor(
                 parseFn = parseFn
             )
         )
+
+        debugLog { "Added text parser $id, there are now ${textParsers.size} text parsers in the chain" }
         return id
     }
 
@@ -326,6 +368,8 @@ class WebsocketPixelblaze internal constructor(
         msgType: InboundBinary<ParsedType>,
         parseFn: (InputStream) -> ParsedType?
     ): ParserID {
+        debugLog { "setBinaryParser(name = $name, msgType = $msgType, <Parse>)" }
+
         val id = UUID.randomUUID()
         binaryParsers[msgType.binaryFlag] = BinaryParser(
             name = binaryParserName(id, name, msgType.binaryFlag, msgType),
@@ -333,11 +377,15 @@ class WebsocketPixelblaze internal constructor(
             type = msgType,
             parseFn = parseFn
         )
+
+        debugLog { "Added binary parser $id, there are now ${binaryParsers.size} binary parsers" }
         return id
     }
 
 
     override fun removeParser(id: ParserID): Boolean {
+        debugLog { "removeParser(id = $id)" }
+
         var found = false
         binaryParsers.filterValues { parser -> parser.id == id }.forEach { parser ->
             found = true
@@ -346,10 +394,16 @@ class WebsocketPixelblaze internal constructor(
 
         found = found || textParsers.removeIf { parser -> parser.id == id }
 
+        debugLog {
+            "Found $id? $found. There are now ${binaryParsers.size} binary parsers and ${textParsers.size} text parsers"
+        }
         return found
     }
 
     override fun removeTextParsersForType(type: InboundText<*>): List<ParserID> {
+        debugLog {
+            "removeTextParsersForType(type = $type)"
+        }
         val removed = mutableListOf<ParserID>()
         textParsers.removeIf {
             if (it.type == type) {
@@ -360,11 +414,15 @@ class WebsocketPixelblaze internal constructor(
             }
         }
 
+        debugLog { "Removed ${removed.size} text parsers, there are now ${textParsers.size}" }
         return removed
     }
 
-    override fun removeBinaryParserForType(type: InboundBinary<*>): ParserID? =
-        binaryParsers.remove(type.binaryFlag)?.id
+    override fun removeBinaryParserForType(type: InboundBinary<*>): ParserID? {
+        debugLog { "removeBinaryParserForType(type = $type)" }
+
+        return binaryParsers.remove(type.binaryFlag)?.id
+    }
 
     override fun getStateCache(
         refreshRates: PixelblazeStateCache.RefreshRates,
@@ -415,6 +473,7 @@ class WebsocketPixelblaze internal constructor(
                     readFrame(receiveResult.getOrThrow())?.run {
                         watchers[this.first]?.forEach { watcher ->
                             try {
+                                debugLog { "Dispatching message to watcher: ${watcher.name}" }
                                 if (watcher.coroutineScope == null) {
                                     watcher.handlerFn(this.second)
                                 } else {
@@ -425,8 +484,9 @@ class WebsocketPixelblaze internal constructor(
                                 }
                             } catch (t: Throwable) {
                                 connectionWatcher(ConnectionEvent.WatcherFailed, t) {
-                                    "Exception in watcher. Type ${this.first.javaClass}, id: ${watcher.id}"
+                                    "Exception in watcher ${watcher.name}"
                                 }
+                                errorLog(t) { "Exception in watcher ${watcher.name}" }
                             }
                         }
                     }
@@ -439,6 +499,7 @@ class WebsocketPixelblaze internal constructor(
                 }
 
                 outboundQueue.poll()?.run {
+                    debugLog { "Sending outbound message: $this" }
                     sendOutboundMessage(this as OutboundMessage<Any, *>, outgoing)
                     workDone = true
                 }
@@ -469,10 +530,19 @@ class WebsocketPixelblaze internal constructor(
                         }?.let { Pair(parser.type, it) }
 
                         if (parsed != null) {
+                            debugLog {
+                                """
+                                |Text ${parser.type} parser ${parser.name} successful!
+                                |    Inbound text: $text
+                                |    Parsed: ${parsed.second}
+                            """.trimMargin()
+                            }
                             return parsed
                         }
                     }
                 }
+
+                debugLog { "No parser found for inbound message: $text" }
                 return null
             }
 
@@ -487,97 +557,101 @@ class WebsocketPixelblaze internal constructor(
                                     Pair(parser.type, this)
                                 }
                             } catch (t: Throwable) {
-                                connectionWatcher(ConnectionEvent.ParseFailed, t) {
-                                    "Parse error for type flag ${message.first.binaryFlag}"
-                                }
+                                connectionWatcher(ConnectionEvent.ParseFailed, t) { "Parse error in ${parser.name}" }
+                                errorLog(t) { "Parse error in ${parser.name}" }
                                 return null
                             }
                         }
                     } else {
+                        debugLog { "No watchers for binary type: ${message.first}, dropping" }
                         return null
                     }
                 }
             }
 
-            else -> return null
+            else -> {
+                debugLog { "Got unexpected frame type: ${frame.javaClass.canonicalName}" }
+                return null
+            }
         }
     }
 
     internal fun readBinaryFrame(frame: Frame.Binary): Pair<InboundBinary<*>, InputStream>? {
         if (frame.data.isEmpty()) {
+            infoLog { "Got empty data frame, dropping" }
             return null
         } else {
             val typeFlag = frame.data[0]
-            if (typeFlag >= 0) {
-                if (typeFlag == InboundPreviewFrame.binaryFlag) { //Preview frames are never split
-                    return if (binaryParsers.containsKey(InboundPreviewFrame.binaryFlag)) {
-                        Pair(InboundPreviewFrame, frame.readBytes().inputStream(1, frame.data.size))
-                    } else {
-                        null
-                    }
+            debugLog { "Got message with type ${BinaryTypeFlag.fromByte(typeFlag)}" }
+
+            if (typeFlag == InboundPreviewFrame.binaryFlag) { //Preview frames are never split
+                // Not even debug logging this, they spam to the point of unreadability
+                return if (binaryParsers.containsKey(InboundPreviewFrame.binaryFlag)) {
+                    Pair(InboundPreviewFrame, frame.readBytes().inputStream(1, frame.data.size))
                 } else {
-                    if (!binaryParsers.containsKey(typeFlag)) {
-                        return null
-                    }
-
-                    if (frame.data.size >= 2) {
-                        return when (FramePosition.fromByte(frame.data[1])) {
-                            FramePosition.First -> {
-                                if (activeMessageType != null) {
-                                    errorLog(null) { "Got new First frame, but we were already reading one" }
-                                    binaryFrames.clear()
-                                }
-                                activeMessageType = InboundRawBinary<InboundMessage>(typeFlag)
-                                binaryFrames.add(frame.readBytes().inputStream(2, frame.data.size))
-                                null
-                            }
-
-                            FramePosition.Middle -> {
-                                if (activeMessageType?.binaryFlag != typeFlag) {
-                                    binaryFrames.clear()
-                                    activeMessageType = null
-                                } else {
-                                    binaryFrames.add(frame.readBytes().inputStream(2, frame.data.size))
-                                }
-                                null
-                            }
-
-                            FramePosition.Last -> {
-                                if (activeMessageType?.binaryFlag == typeFlag) {
-                                    val stream = frame.readBytes().inputStream(2, frame.data.size)
-                                    val concatStream = SequenceInputStream(
-                                        binaryFrames.fold(ByteArray(0).inputStream() as InputStream) { acc, streamPortion ->
-                                            SequenceInputStream(
-                                                acc,
-                                                streamPortion
-                                            )
-                                        },
-                                        stream
-                                    )
-                                    activeMessageType = null
-                                    binaryFrames.clear()
-                                    Pair(InboundRawBinary<InboundMessage>(typeFlag), concatStream)
-                                } else {
-                                    binaryFrames.clear()
-                                    null
-                                }
-                            }
-
-                            FramePosition.Only -> {
-                                Pair(
-                                    InboundRawBinary<InboundMessage>(typeFlag),
-                                    frame.readBytes().inputStream(2, frame.data.size)
-                                )
-                            }
-
-                            null -> null
-                        }
-                    } else {
-                        return null
-                    }
+                    null
                 }
             } else {
-                return null
+                // This is just to prevent unneeded work, still need to check below because concurrency
+                if (!binaryParsers.containsKey(typeFlag)) {
+                    return null
+                }
+
+                if (frame.data.size >= 2) {
+                    return when (FramePosition.fromByte(frame.data[1])) {
+                        FramePosition.First -> {
+                            if (activeMessageType != null) {
+                                errorLog(null) { "Got new First frame, but we were already reading one" }
+                                binaryFrames.clear()
+                            }
+                            activeMessageType = InboundRawBinary<InboundMessage>(typeFlag)
+                            binaryFrames.add(frame.readBytes().inputStream(2, frame.data.size))
+                            null
+                        }
+
+                        FramePosition.Middle -> {
+                            if (activeMessageType?.binaryFlag != typeFlag) {
+                                binaryFrames.clear()
+                                activeMessageType = null
+                            } else {
+                                binaryFrames.add(frame.readBytes().inputStream(2, frame.data.size))
+                            }
+                            null
+                        }
+
+                        FramePosition.Last -> {
+                            if (activeMessageType?.binaryFlag == typeFlag) {
+                                val stream = frame.readBytes().inputStream(2, frame.data.size)
+                                val concatStream = SequenceInputStream(
+                                    binaryFrames.fold(ByteArray(0).inputStream() as InputStream) { acc, streamPortion ->
+                                        SequenceInputStream(
+                                            acc,
+                                            streamPortion
+                                        )
+                                    },
+                                    stream
+                                )
+                                activeMessageType = null
+                                binaryFrames.clear()
+                                Pair(InboundRawBinary<InboundMessage>(typeFlag), concatStream)
+                            } else {
+                                binaryFrames.clear()
+                                null
+                            }
+                        }
+
+                        FramePosition.Only -> {
+                            Pair(
+                                InboundRawBinary<InboundMessage>(typeFlag),
+                                frame.readBytes().inputStream(2, frame.data.size)
+                            )
+                        }
+
+                        null -> null
+                    }
+                } else {
+                    return null
+                }
             }
         }
     }
@@ -605,6 +679,8 @@ class WebsocketPixelblaze internal constructor(
     }
 
     override fun close() {
+        debugLog { "Closing connection to $address:$port" }
+
         runBlocking {
             saveAfterJobs.values.forEach { job -> job.cancel() }
             cronMessages.values.forEach { job -> job.cancel() }
@@ -912,6 +988,9 @@ class WebsocketPixelblaze internal constructor(
                 "$id - ${name ?: type.javaClass.canonicalName}(${BinaryTypeFlag.fromByte(type.binaryFlag)})"
         }
 
+        /**
+         * Sets all the fields necessary to build and adds the default parsers
+         */
         fun defaultBuilder(): Builder {
             return bareBuilder()
                 .setPixelblazeIp("192.168.4.1")
