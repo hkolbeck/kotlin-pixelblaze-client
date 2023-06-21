@@ -1,6 +1,7 @@
 package industries.hannah.pixelblaze
 
 import com.google.gson.Gson
+import com.sun.org.apache.xpath.internal.operations.Bool
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.SendChannel
 import java.io.Closeable
@@ -47,20 +48,21 @@ interface Pixelblaze : Closeable {
     fun <Out, Wrapper : OutboundMessage<*, Out>> issueOutbound(msg: Wrapper): Boolean
 
     /**
-     * Send an outbound message and await a response of a specified type. This is fragile because nothing prevents
-     * it returning an inbound message triggered by some other request. Its use in a multithreaded environment
-     * is especially discouraged
+     * Send an outbound message and await a response of a specified type. Its use in a multithreaded environment
+     * is discouraged as the ability to discern whether a reply is to you can be unreliable
      *
      * @param msg the message to be sent
      * @param inboundType the message type to await
      * @param maxWait the maximum duration to wait
+     * @param isMine a predicate to check if a received message matches the request
      *
      * @return a response of the specified type if one came back in time, or else null
      */
     suspend fun <Out, Wrapper : OutboundMessage<*, Out>, Resp : InboundMessage> issueOutboundAndWait(
         msg: Wrapper,
         inboundType: Inbound<Resp>,
-        maxWait: Duration
+        maxWait: Duration,
+        isMine: (Resp) -> Boolean = { true }
     ): Resp?
 
     /**
@@ -228,6 +230,10 @@ interface Pixelblaze : Closeable {
          * @return The
          */
         fun humanizeVarName(varName: String): String {
+            if (varName.isEmpty()) {
+                return varName
+            }
+
             val stripped = varName.trim().removePrefix("slider").toCharArray()
             val result = StringBuilder()
             var currentWord = StringBuilder()

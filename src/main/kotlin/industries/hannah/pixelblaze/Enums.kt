@@ -3,6 +3,7 @@ package industries.hannah.pixelblaze
 enum class ConnectionEvent {
     Connected,
     ScheduledMessageEnqueueFailure,
+    ParseFailed,
     WatchThreadException,
     WatcherFailed,
     ClientDisconnect,
@@ -14,7 +15,7 @@ enum class BinaryTypeFlag(val typeVal: Byte) {
     PreviewImage(4),
     PreviewFrame(5),
     GetSource(6),
-    GetProgramList(7),
+    AllPrograms(7),
     PutPixelMap(8),
     ExpanderChannels(9);
 
@@ -26,7 +27,7 @@ enum class BinaryTypeFlag(val typeVal: Byte) {
                 4 -> PreviewImage
                 5 -> PreviewFrame
                 6 -> GetSource //Unsupported
-                7 -> GetProgramList //Unsupported
+                7 -> AllPrograms //Unsupported
                 8 -> PutPixelMap //Unsupported
                 9 -> ExpanderChannels
                 else -> null

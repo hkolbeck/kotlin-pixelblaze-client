@@ -30,6 +30,8 @@ object OutboundGetAllPrograms : OutboundText<GetAllPrograms>(GetAllPrograms::cla
 object OutboundNextPattern : OutboundText<NextPattern>(NextPattern::class.java)
 object OutboundGetPeers : OutboundText<GetPeers>(GetPeers::class.java)
 object OutboundGetSystemState : OutboundText<GetSystemState>(GetSystemState::class.java)
+
+object OutboundSetRunSequencer : OutboundText<SetRunSequencer>(SetRunSequencer::class.java)
 object OutboundPing : OutboundText<Ping>(Ping::class.java)
 class OutboundRawText<R : OutboundJsonMessage<*>>(messageClass: Class<R>) : OutboundText<R>(messageClass)
 
@@ -155,6 +157,9 @@ class SetSendUpdates(sendUpdates: Boolean) : TrivialJsonMessage<Boolean>("sendUp
     override val type = OutboundSetSendUpdates
 }
 
+class SetRunSequencer(play: Boolean) : TrivialJsonMessage<Boolean>("runSequencer", play) {
+    override val type = OutboundSetRunSequencer
+}
 abstract class SaveOptionalSet<V>(key: String, value: V, save: Boolean) : OutboundJsonMessage<Map<String, Any>>() {
     private val body = mapOf(
         Pair(key, value),

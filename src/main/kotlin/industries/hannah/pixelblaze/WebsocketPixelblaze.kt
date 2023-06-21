@@ -112,14 +112,16 @@ class WebsocketPixelblaze internal constructor(
     override suspend fun <Out, Wrapper : OutboundMessage<*, Out>, Resp : InboundMessage> issueOutboundAndWait(
         msg: Wrapper,
         inboundType: Inbound<Resp>,
-        maxWait: Duration
+        maxWait: Duration,
+        isMine: (Resp) -> Boolean
     ): Resp? {
         val guard = AtomicBoolean(false)
 
         return suspendCoroutineWithTimeout(maxWait) { continuation ->
             var id: WatcherID? = null
             val watchFn: (Resp) -> Unit = { resp: Resp ->
-                if (!guard.getAndSet(true)) { //Check if this watcher has been invoked, bail if it has
+                //Check if this resp matches our request and if the watcher has been invoked, bail if it has
+                if (isMine(resp) && !guard.getAndSet(true)) {
                     continuation.resume(resp)
                     removeWatcher(id!!)
                 }
@@ -147,7 +149,13 @@ class WebsocketPixelblaze internal constructor(
         cronMessages[scheduleId] = cronScope.async {
             delay(initialDelay)
             while (isActive) {
-                issueOutbound(msgGenerator())
+                if (!issueOutbound(msgGenerator())) {
+                    connectionWatcher(
+                        ConnectionEvent.ScheduledMessageEnqueueFailure,
+                        "Queue was full when scheduled message submission was attempted",
+                        null
+                    )
+                }
                 delay(interval)
             }
         }
@@ -373,10 +381,16 @@ class WebsocketPixelblaze internal constructor(
             is Frame.Text -> {
                 for (parser in textParsers) {
                     if (watchers[parser.type as Inbound<*>]?.isNotEmpty() == true) {
-                        val parsed = parser.parseFn(gson, frame.readText())
-                        if (parsed != null) {
-                            return Pair(parser.type, parsed)
-                        }
+                        val parsed = try {
+                            parser.parseFn(gson, frame.readText())
+                        } catch (t: Throwable) {
+                            connectionWatcher(
+                                ConnectionEvent.ParseFailed,
+                                "Parse error for type ${parser.type.extractedType}",
+                                t
+                            )
+                            null
+                        }?.let { Pair(parser.type, it) }
                     }
                 }
                 null
@@ -388,8 +402,17 @@ class WebsocketPixelblaze internal constructor(
                     if (watchers[message.first as Inbound<*>]?.isNotEmpty() == true) {
                         binaryParsers[message.first.binaryFlag]?.run {
                             val parser = this
-                            parser.parseFn(message.second)?.run {
-                                Pair(parser.type, this)
+                            try {
+                                parser.parseFn(message.second)?.run {
+                                    Pair(parser.type, this)
+                                }
+                            } catch (t: Throwable) {
+                                connectionWatcher(
+                                    ConnectionEvent.ParseFailed,
+                                    "Parse error for type flag ${message.first.binaryFlag}",
+                                    t
+                                )
+                                null
                             }
                         }
                     } else {
@@ -402,7 +425,7 @@ class WebsocketPixelblaze internal constructor(
         }
     }
 
-    private fun readBinaryFrame(frame: Frame.Binary): Pair<InboundBinary<*>, InputStream>? {
+    internal fun readBinaryFrame(frame: Frame.Binary): Pair<InboundBinary<*>, InputStream>? {
         if (frame.data.isEmpty()) {
             return null
         } else {
@@ -658,7 +681,7 @@ class WebsocketPixelblaze internal constructor(
                 if (except.contains(InboundAllPrograms)) this
                 else this.setBinaryParser(
                     InboundAllPrograms,
-                    ProgramList::fromBinary
+                    AllPrograms::fromBinary
                 ).second
             }.run {
                 if (except.contains(InboundExpanderChannels)) this
@@ -733,7 +756,8 @@ class WebsocketPixelblaze internal constructor(
                 infoLog = infoLog,
                 debugLog = debugLog,
                 ioLoopDispatcher = ioLoopDispatcher ?: throw RuntimeException("No io loop dispatcher specified"),
-                saveAfterDispatcher = saveAfterDispatcher ?: throw RuntimeException("No save after dispatcher specified"),
+                saveAfterDispatcher = saveAfterDispatcher
+                    ?: throw RuntimeException("No save after dispatcher specified"),
                 cronDispatcher = cronDispatcher ?: throw RuntimeException("No scheduled dispatcher specified")
             )
         }
@@ -758,6 +782,5 @@ class WebsocketPixelblaze internal constructor(
         fun bareBuilder(): Builder {
             return Builder()
         }
-
     }
 }

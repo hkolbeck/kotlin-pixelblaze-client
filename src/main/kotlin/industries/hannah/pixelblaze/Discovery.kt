@@ -26,8 +26,15 @@ class Discovery(private val httpClient: HttpClient = HttpClient()) {
     suspend fun discoverLocalPixelblazes(): List<Discovered>? {
         val response = httpClient.get("http://discover.electromage.com/discover")
         return if (response.status == HttpStatusCode.OK) {
-            val body = response.bodyAsText()
-            try {
+            discoveredListFromText(gson, response.bodyAsText())
+        } else {
+            null
+        }
+    }
+
+    companion object {
+        fun discoveredListFromText(gson: Gson, body: String): List<Discovered>? {
+            return try {
                 val arr = gson.fromJson(body, JsonArray::class.java)
                 arr.map { ele ->
                     val json = ele.asJsonObject
@@ -45,8 +52,6 @@ class Discovery(private val httpClient: HttpClient = HttpClient()) {
             } catch (t: Throwable) {
                 null
             }
-        } else {
-            null
         }
     }
 }

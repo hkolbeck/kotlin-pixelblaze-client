@@ -1,7 +1,10 @@
 package industries.hannah.pixelblaze
 
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 /**
@@ -70,6 +73,23 @@ class PixelblazeStateCache(
         //Finally we record the ones that just come on their own
         pixelblaze.addWatcher(InboundSequencerState) { seqStateHolder.set(it) }
         pixelblaze.addWatcher(InboundStats) { statsHolder.set(it) }
+    }
+
+    suspend fun awaitFill(maxWait: Duration, awaitExpanders: Boolean = false): Boolean {
+        return withTimeoutOrNull(maxWait) {
+            while (
+                allPatternsHolder.get() == null &&
+                currPlaylistHolder.get() == null &&
+                statsHolder.get() == null &&
+                seqStateHolder.get() == null &&
+                peersHolder.get() == null &&
+                settingsHolder.get() == null &&
+                (awaitExpanders && expanderChannelsHolder.get() == null)
+            ) {
+                delay(100.milliseconds)
+            }
+            true
+        } != null
     }
 
     fun allPatterns(): Map<String, String>? = allPatternsHolder.get()

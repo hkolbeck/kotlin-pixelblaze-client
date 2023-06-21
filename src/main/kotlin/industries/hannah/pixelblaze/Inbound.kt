@@ -37,7 +37,7 @@ abstract class InboundBinary<T : InboundMessage>(val binaryFlag: Byte) : Inbound
 
 object InboundPreviewImage : InboundBinary<PreviewImage>(4)
 object InboundPreviewFrame : InboundBinary<PreviewFrame>(5)
-object InboundAllPrograms : InboundBinary<ProgramList>(7)
+object InboundAllPrograms : InboundBinary<AllPrograms>(7)
 object InboundExpanderChannels : InboundBinary<ExpanderChannels>(9)
 class InboundRawBinary<T : InboundMessage>(binaryFlag: Byte) : InboundBinary<T>(binaryFlag)
 
@@ -461,7 +461,7 @@ data class PreviewFrame(
     val pixels: List<Pixel>
 ) : InboundMessage {
 
-    fun to_image(width: UInt, height: UInt): Image {
+    fun toImage(width: UInt, height: UInt): Image {
         val buffer = pixels.map { it.toInt() }.toIntArray()
         val image = BufferedImage(width.toInt(), height.toInt(), BufferedImage.TYPE_INT_ARGB)
         image.setRGB(0, 0, buffer.size, 1, buffer, 0, 1)
@@ -495,17 +495,17 @@ data class NamedPattern(
     val name: String
 )
 
-data class ProgramList(
+data class AllPrograms(
     val patterns: List<NamedPattern>
 ) : InboundMessage {
     companion object {
-        fun fromBinary(stream: InputStream): ProgramList? {
+        fun fromBinary(stream: InputStream): AllPrograms? {
             val patterns = stream.bufferedReader().lines().map {
                 val (id, name) = it.split('\t', limit = 2)
                 NamedPattern(id, name)
             }.toList()
 
-            return ProgramList(patterns)
+            return AllPrograms(patterns)
         }
     }
 }

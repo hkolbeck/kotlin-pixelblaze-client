@@ -90,7 +90,7 @@ to only save the value occasionally. `saveAfter()` provides a way to send writes
 most recent update has not yet been saved.
 
 ```kotlin
-    val sendChannel = pixelblaze.saveAfter(3.seconds) { brightness: Float, save -> SetBrightness(brightness, save) }
+val sendChannel = pixelblaze.saveAfter(3.seconds) { brightness: Float, save -> SetBrightness(brightness, save) }
 sendChannel.trySend(0.5f) // Or send() is also possible from a coroutine context or using runBlocking {}
 ```
 
