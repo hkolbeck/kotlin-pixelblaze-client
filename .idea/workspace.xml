@@ -4,9 +4,19 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="bac320fe-f3d8-48cb-8294-7d2b1eca689a" name="Changes" comment="Add new builder requirements to README section on bareBuilder()">
+    <list default="true" id="bac320fe-f3d8-48cb-8294-7d2b1eca689a" name="Changes" comment="Make default reconnect strategy an exponential backoff, cleanup a few things in the README">
+      <change afterPath="$PROJECT_DIR$/src/test/kotlin/industries/hannah/pixelblaze/test/BinaryExampleFetcher.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/PixelblazeConfig.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/PixelblazeConfig.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/Pixelblaze.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/Pixelblaze.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/PixelblazeStateCache.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/PixelblazeStateCache.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/WebsocketPixelblaze.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/WebsocketPixelblaze.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/examples/BasicClientUsage.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/examples/BasicClientUsage.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/examples/CustomMessages.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/examples/CustomMessages.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/kotlin/industries/hannah/pixelblaze/test/TestTextParsers.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/kotlin/industries/hannah/pixelblaze/test/TestTextParsers.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/kotlin/industries/hannah/pixelblaze/test/functional/TestBasicOperation.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/kotlin/industries/hannah/pixelblaze/test/functional/TestBasicOperation.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/resources/binary_samples/inbound/all_programs.b64" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/resources/binary_samples/inbound/all_programs.b64" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/resources/binary_samples/inbound/preview_frame.b64" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/resources/binary_samples/inbound/preview_frame.b64" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -23,8 +33,8 @@
       <list>
         <option value="Kotlin Sealed Interface" />
         <option value="Kotlin Data Class" />
-        <option value="Kotlin File" />
         <option value="Kotlin Class" />
+        <option value="Kotlin File" />
       </list>
     </option>
   </component>
@@ -64,7 +74,7 @@
       <recent name="industries.hannah.pixelblaze" />
     </key>
   </component>
-  <component name="RunManager" selected="Gradle.TestTextParsers">
+  <component name="RunManager" selected="Kotlin.BinaryExampleFetcherKt">
     <configuration name="TestTextParsers" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
       <ExternalSystemSettings>
         <option name="executionName" />
@@ -134,8 +144,16 @@
       <DebugAllEnabled>false</DebugAllEnabled>
       <method v="2" />
     </configuration>
+    <configuration name="BinaryExampleFetcherKt" type="JetRunConfigurationType" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="industries.hannah.pixelblaze.test.BinaryExampleFetcherKt" />
+      <module name="kotlin-pixelblaze-client.test" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Kotlin.BinaryExampleFetcherKt" />
         <item itemvalue="Gradle.TestTextParsers" />
         <item itemvalue="Gradle.TestTextParsers.testParseDiscovery" />
         <item itemvalue="Gradle.TestUtilityFunctions" />
@@ -151,7 +169,7 @@
       <option name="presentableId" value="Default" />
       <updated>1686884861554</updated>
       <workItem from="1686884863004" duration="197270000" />
-      <workItem from="1687298224263" duration="18656000" />
+      <workItem from="1687298224263" duration="29330000" />
     </task>
     <task id="LOCAL-00001" summary="lol git">
       <created>1686965358941</created>
@@ -321,7 +339,14 @@
       <option name="project" value="LOCAL" />
       <updated>1687317907784</updated>
     </task>
-    <option name="localTasksCounter" value="25" />
+    <task id="LOCAL-00025" summary="Make default reconnect strategy an exponential backoff, cleanup a few things in the README">
+      <created>1687318628992</created>
+      <option name="number" value="00025" />
+      <option name="presentableId" value="LOCAL-00025" />
+      <option name="project" value="LOCAL" />
+      <updated>1687318628992</updated>
+    </task>
+    <option name="localTasksCounter" value="26" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -363,6 +388,7 @@
     <MESSAGE value="Allow fetching a state cache or Discovery direct from a pixelblaze client." />
     <MESSAGE value="fix tyop" />
     <MESSAGE value="Add new builder requirements to README section on bareBuilder()" />
-    <option name="LAST_COMMIT_MESSAGE" value="Add new builder requirements to README section on bareBuilder()" />
+    <MESSAGE value="Make default reconnect strategy an exponential backoff, cleanup a few things in the README" />
+    <option name="LAST_COMMIT_MESSAGE" value="Make default reconnect strategy an exponential backoff, cleanup a few things in the README" />
   </component>
 </project>

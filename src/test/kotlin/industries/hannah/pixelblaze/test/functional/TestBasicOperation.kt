@@ -21,7 +21,7 @@ class TestBasicOperation {
     fun testPing() {
         val mutex = Mutex(true)
         pixelblaze.addWatcher(InboundAck) { mutex.unlock() }
-        pixelblaze.issueOutbound(Ping)
+        pixelblaze.sendOutbound(Ping)
 
         runBlocking {
             withTimeout(2.seconds) {

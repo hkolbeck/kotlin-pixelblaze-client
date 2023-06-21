@@ -1,7 +1,6 @@
 package industries.hannah.pixelblaze
 
 import com.google.gson.Gson
-import com.sun.org.apache.xpath.internal.operations.Bool
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.SendChannel
 import java.io.Closeable
@@ -45,7 +44,7 @@ interface Pixelblaze : Closeable {
      *
      * @return true if the message was successfully placed in the outbound queue, false otherwise
      */
-    fun <Out, Wrapper : OutboundMessage<*, Out>> issueOutbound(msg: Wrapper): Boolean
+    fun <Out, Wrapper : OutboundMessage<*, Out>> sendOutbound(msg: Wrapper): Boolean
 
     /**
      * Send an outbound message and await a response of a specified type. Its use in a multithreaded environment
@@ -115,9 +114,15 @@ interface Pixelblaze : Closeable {
      * @param handler the function to invoke with the parsed message
      */
     fun <ParsedType : InboundMessage> addWatcher(
+        name: String?,
         type: Inbound<ParsedType>,
         handler: (ParsedType) -> Unit
     ): WatcherID
+
+    fun <ParsedType : InboundMessage> addWatcher(
+        type: Inbound<ParsedType>,
+        handler: (ParsedType) -> Unit
+    ): WatcherID = addWatcher(null, type, handler)
 
     /**
      * Add a watcher for some type. It will be invoked anytime a message of the specified type is received.
@@ -128,10 +133,17 @@ interface Pixelblaze : Closeable {
      * @param handler the function to be invoked
      */
     fun <ParsedType : InboundMessage> addWatcher(
+        name: String?,
         type: Inbound<ParsedType>,
         coroutineScope: CoroutineScope,
         handler: (ParsedType) -> Unit
     ): WatcherID
+
+    fun <ParsedType : InboundMessage> addWatcher(
+        type: Inbound<ParsedType>,
+        coroutineScope: CoroutineScope,
+        handler: (ParsedType) -> Unit
+    ): WatcherID = addWatcher(null, type, coroutineScope, handler)
 
     /**
      * Remove a watcher
@@ -162,24 +174,38 @@ interface Pixelblaze : Closeable {
      * @return An ID that can be used to later remove the parser
      */
     fun <ParsedType : InboundMessage> addTextParser(
+        name: String?,
         priority: Int,
         msgType: InboundText<ParsedType>,
-        parserFn: (Gson, String) -> ParsedType?
+        parseFn: (Gson, String) -> ParsedType?
     ): ParserID
+
+    fun <ParsedType : InboundMessage> addTextParser(
+        priority: Int,
+        msgType: InboundText<ParsedType>,
+        parseFn: (Gson, String) -> ParsedType?
+    ): ParserID = addTextParser(null, priority, msgType, parseFn)
 
     /**
      * Set the binary parser for a given binary type. Only one parser may be assigned to a given binary type.
      * If no watcher is assigned to the given type when a message with that type is received, it will not be parsed
      *
+     * @param name only for debugging, may be null
      * @param msgType the type of message to parse
      * @param parserFn the parse function
      *
      * @return An ID that can be used to later remove the parser
      */
     fun <ParsedType : InboundMessage> setBinaryParser(
+        name: String?,
         msgType: InboundBinary<ParsedType>,
-        parserFn: (InputStream) -> ParsedType?
+        parseFn: (InputStream) -> ParsedType?
     ): ParserID
+
+    fun <ParsedType : InboundMessage> setBinaryParser(
+        msgType: InboundBinary<ParsedType>,
+        parseFn: (InputStream) -> ParsedType?
+    ): ParserID = setBinaryParser(null, msgType, parseFn)
 
     /**
      * Remove a parser of either type

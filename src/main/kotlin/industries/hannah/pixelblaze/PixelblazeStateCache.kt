@@ -88,15 +88,25 @@ class PixelblazeStateCache(
     suspend fun awaitFill(maxWait: Duration, awaitExpanders: Boolean = false): Boolean {
         return withTimeoutOrNull(maxWait) {
             while (
-                (!excludedOutboundTypes.contains(OutboundGetAllPrograms) && allPatternsHolder.get() == null) &&
-                (!excludedOutboundTypes.contains(OutboundGetPlaylist) && currPlaylistHolder.get() == null) &&
-                (!excludedOutboundTypes.contains(OutboundGetSystemState) && seqStateHolder.get() == null) &&
-                (!excludedOutboundTypes.contains(OutboundGetPeers) && peersHolder.get() == null) &&
-                (!excludedOutboundTypes.contains(OutboundGetSystemState) && settingsHolder.get() == null) &&
-                statsHolder.get() == null &&
+                (!excludedOutboundTypes.contains(OutboundGetAllPrograms) && allPatternsHolder.get() == null) ||
+                (!excludedOutboundTypes.contains(OutboundGetPlaylist) && currPlaylistHolder.get() == null) ||
+                (!excludedOutboundTypes.contains(OutboundGetSystemState) && seqStateHolder.get() == null) ||
+                (!excludedOutboundTypes.contains(OutboundGetPeers) && peersHolder.get() == null) ||
+                (!excludedOutboundTypes.contains(OutboundGetSystemState) && settingsHolder.get() == null) ||
+                statsHolder.get() == null ||
                 (awaitExpanders && expanderChannelsHolder.get() == null)
             ) {
-                delay(100.milliseconds)
+                println("""
+                    allPatternsHolder = ${allPatternsHolder.get() == null}
+                    currPlaylistHolder = ${currPlaylistHolder.get() == null}
+                    seqStateHolder = ${seqStateHolder.get() == null}
+                    peersHolder = ${peersHolder.get() == null}
+                    settingsHolder = ${settingsHolder.get() == null}
+                    statsHolder = ${statsHolder.get() == null}
+                    expanderChannelsHolder = ${expanderChannelsHolder.get() == null}
+                """.trimIndent())
+
+                delay(1000.milliseconds)
             }
             true
         } != null

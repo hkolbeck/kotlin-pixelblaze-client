@@ -62,7 +62,7 @@ fun main() {
 
     runBlocking {
         while (true) {
-            pixelblaze.issueOutbound(MyOutboundMessage)
+            pixelblaze.sendOutbound(MyOutboundMessage)
             delay(3000)
         }
     }

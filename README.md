@@ -149,10 +149,7 @@ values may not be available immediately, though they are requested immediately.
 ```kotlin
 val pixelblaze = Pixelblaze.default()
 val stateCache = pixelblaze.getStateCache()
-
-if (!stateCache.awaitFill(3.seconds)) { // It should take tens of milliseconds
-    throw RuntimeException("Cache never populated!")
-}
+stateCache.awaitFill(3.seconds) || throw RuntimeException("Cache never populated!")
 
 val currentPlaylistIdx = stateCache.currentPlaylistIndex()!!
 ```

@@ -29,7 +29,7 @@ fun main() {
          * The ping command takes no arguments, so it's defined statically. Other outbound messages
          * require fields set.
          */
-        pixelblaze.issueOutbound(Ping)
+        pixelblaze.sendOutbound(Ping)
 
         sleep(3000)
     }
