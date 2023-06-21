@@ -17,6 +17,7 @@ import java.time.Instant
 import java.util.*
 import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.collections.ArrayDeque
 import kotlin.collections.set
 import kotlin.coroutines.Continuation
@@ -54,6 +55,9 @@ class WebsocketPixelblaze internal constructor(
 
     private val binaryFrames: ArrayDeque<InputStream> = ArrayDeque(config.inboundBufferQueueDepth)
     private var activeMessageType: InboundBinary<*>? = null
+
+    private val cache: AtomicReference<PixelblazeStateCache?> = AtomicReference(null)
+    private val discovery = Discovery(httpClient)
 
     internal data class TextParser<Message : InboundMessage>(
         val id: ParserID,
@@ -314,6 +318,30 @@ class WebsocketPixelblaze internal constructor(
 
     override fun removeBinaryParserForType(type: InboundBinary<*>): ParserID? =
         binaryParsers.remove(type.binaryFlag)?.id
+
+    override fun getStateCache(
+        refreshRates: PixelblazeStateCache.RefreshRates,
+        excludedOutboundTypes: Set<Outbound<*>>
+    ): PixelblazeStateCache {
+        var current = cache.get()
+        if (current?.isClosed() == true) {
+            cache.compareAndSet(current, null)
+            current = null
+        }
+
+        if (current == null) {
+            val newCache = PixelblazeStateCache(this, refreshRates, excludedOutboundTypes)
+            val set = cache.compareAndSet(null, newCache)
+            if (!set) {
+                newCache.close()
+            }
+        }
+
+
+        return cache.get()!!
+    }
+
+    override fun getDiscovery(): Discovery = discovery
 
     private suspend fun watchConnection(scope: CoroutineScope): Boolean {
         var unclosed = false

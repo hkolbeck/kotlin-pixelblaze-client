@@ -4,7 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="bac320fe-f3d8-48cb-8294-7d2b1eca689a" name="Changes" comment="First sketch of tests">
+    <list default="true" id="bac320fe-f3d8-48cb-8294-7d2b1eca689a" name="Changes" comment="Fix a watcher leak in issueOutboundAndWait()">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/Pixelblaze.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/Pixelblaze.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/PixelblazeStateCache.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/PixelblazeStateCache.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/WebsocketPixelblaze.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/WebsocketPixelblaze.kt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -150,7 +154,7 @@
       <option name="presentableId" value="Default" />
       <updated>1686884861554</updated>
       <workItem from="1686884863004" duration="197270000" />
-      <workItem from="1687298224263" duration="14757000" />
+      <workItem from="1687298224263" duration="17951000" />
     </task>
     <task id="LOCAL-00001" summary="lol git">
       <created>1686965358941</created>
@@ -292,7 +296,14 @@
       <option name="project" value="LOCAL" />
       <updated>1687313869049</updated>
     </task>
-    <option name="localTasksCounter" value="21" />
+    <task id="LOCAL-00021" summary="Fix a watcher leak in issueOutboundAndWait()">
+      <created>1687314487701</created>
+      <option name="number" value="00021" />
+      <option name="presentableId" value="LOCAL-00021" />
+      <option name="project" value="LOCAL" />
+      <updated>1687314487701</updated>
+    </task>
+    <option name="localTasksCounter" value="22" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -330,6 +341,7 @@
     <MESSAGE value="Fill out README" />
     <MESSAGE value="Add notes about contributions" />
     <MESSAGE value="First sketch of tests" />
-    <option name="LAST_COMMIT_MESSAGE" value="First sketch of tests" />
+    <MESSAGE value="Fix a watcher leak in issueOutboundAndWait()" />
+    <option name="LAST_COMMIT_MESSAGE" value="Fix a watcher leak in issueOutboundAndWait()" />
   </component>
 </project>

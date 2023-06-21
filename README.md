@@ -129,12 +129,16 @@ Local Pixelblaze Discovery
 --------------------------
 
 Pixelblaze offers a utility to discover controllers on your local network if that network is connected to the internet.
-To do so, use the `Discovery` class:
+To do so, use the `Discovery` class. If you call `getDiscovery()` it will use the same HTTP client as the Pixelblaze
+instance. If you need an instance with its own client or without creating a Pixelblaze instance, its constructor is
+also exposed
 
 ```kotlin
-val discovery = Discovery()
+val pixelblaze = Pixelblaze.default()
+val discovery = pixelblaze.getDiscovery()
 val discovered: List<Discovered> = discovery.discoverLocalPixelblazes()
 ```
+
 
 Pixelblaze State Caching
 ------------------------
@@ -146,9 +150,11 @@ values may not be available immediately, though they are requested immediately.
 
 ```kotlin
 val pixelblaze = Pixelblaze.default()
-val stateCache = PixelblazeStateCache(pixelblaze)
+val stateCache = pixelblaze.getStateCache()
 
-/* Some time passes... */
+if (!stateCache.awaitFill(3.seconds)) { // It should take tens of milliseconds
+    throw RuntimeException("Cache never populated!")
+}
 
 val currentPlaylistIdx = stateCache.currentPlaylistIndex()!!
 ```

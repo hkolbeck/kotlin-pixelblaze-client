@@ -208,6 +208,30 @@ interface Pixelblaze : Closeable {
      */
     fun removeBinaryParserForType(type: InboundBinary<*>): ParserID?
 
+    /**
+     * Get a state cache for the active connection. The result is safe to hang onto and pass around.
+     * Implementations must not construct the cache before this is called, and must return the same
+     * cache if the function is called multiple times, though its configuration will always be that
+     * first provided. If you need to update configs, you can close() the existing cache and call
+     * getStateCache() again with the new configs, bearing in mind that calls to the old cache will
+     * begin failing with [IllegalStateException]
+     *
+     * @param refreshRates config object to control how often various requests are made
+     * @param excludedOutboundTypes advanced usage. check the cache code for more info on what schedules/watchers it
+     *                              creates and which ones you might want to exclude, keeping in mind that each will
+     *                              cause one or more cache methods to always return null
+     */
+    fun getStateCache(
+        refreshRates: PixelblazeStateCache.RefreshRates = PixelblazeStateCache.RefreshRates(),
+        excludedOutboundTypes: Set<Outbound<*>> = setOf()
+    ): PixelblazeStateCache
+
+    /**
+     * Get a discovery client using this instances HTTP client. Calling this multiple times will return the same
+     * [Discovery] instance
+     */
+    fun getDiscovery(): Discovery
+
     companion object {
         const val DEFAULT_PLAYLIST = "_defaultplaylist_"
 

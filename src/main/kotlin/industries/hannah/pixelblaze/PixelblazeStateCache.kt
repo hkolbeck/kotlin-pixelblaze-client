@@ -1,7 +1,10 @@
 package industries.hannah.pixelblaze
 
+import io.ktor.util.collections.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeoutOrNull
+import java.io.Closeable
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
@@ -16,10 +19,15 @@ import kotlin.time.Duration.Companion.seconds
  * associated parsers, and so the value exposed here will always be null.
  */
 class PixelblazeStateCache(
-    pixelblaze: Pixelblaze,
+    private val pixelblaze: Pixelblaze,
     refreshRates: RefreshRates = RefreshRates(),
-    excludedOutboundTypes: Set<Outbound<*>> = setOf()
-) {
+    private val excludedOutboundTypes: Set<Outbound<*>> = setOf()
+) : Closeable {
+    private val closeCalled = AtomicBoolean(false)
+
+    private val scheduleIds: MutableSet<ScheduledMessageId> = ConcurrentSet()
+    private val watcherIds: MutableSet<WatcherID> = ConcurrentSet()
+
     private val allPatternsHolder: AtomicReference<Map<String, String>?> = AtomicReference(null)
     private val currPlaylistHolder: AtomicReference<Playlist?> = AtomicReference(null)
     private val statsHolder: AtomicReference<Stats?> = AtomicReference(null)
@@ -41,49 +49,51 @@ class PixelblazeStateCache(
     init {
         //First, we need to both set watchers and arrange scheduled requests for those endpoints that require it
         if (!excludedOutboundTypes.contains(OutboundGetPeers)) {
-            pixelblaze.addWatcher(InboundPeers) { peersHolder.set(it) }
-            pixelblaze.repeatOutbound({ GetPeers }, refreshRates.peers, Duration.ZERO)
+            watcherIds.add(pixelblaze.addWatcher(InboundPeers) { peersHolder.set(it) })
+            scheduleIds.add(pixelblaze.repeatOutbound({ GetPeers }, refreshRates.peers, Duration.ZERO))
         }
 
         if (!excludedOutboundTypes.contains(OutboundGetSystemState)) {
-            pixelblaze.addWatcher(InboundSettings) { settingsHolder.set(it) }
-            pixelblaze.addWatcher(InboundExpanderChannels) { expanderChannelsHolder.set(it) }
+            watcherIds.add(pixelblaze.addWatcher(InboundSettings) { settingsHolder.set(it) })
+            watcherIds.add(pixelblaze.addWatcher(InboundExpanderChannels) { expanderChannelsHolder.set(it) })
             // This also requests a sequencer state, but we want to watch that no matter what
-            pixelblaze.repeatOutbound({ GetSystemState }, refreshRates.systemState, Duration.ZERO)
+            scheduleIds.add(pixelblaze.repeatOutbound({ GetSystemState }, refreshRates.systemState, Duration.ZERO))
         }
 
         if (!excludedOutboundTypes.contains(OutboundGetAllPrograms)) {
-            pixelblaze.addWatcher(InboundAllPrograms) { it ->
+            watcherIds.add(pixelblaze.addWatcher(InboundAllPrograms) { it ->
                 allPatternsHolder.set(it.patterns.associate {
                     Pair(it.id, it.name)
                 })
-            }
-            pixelblaze.repeatOutbound({ GetAllPrograms }, refreshRates.allPatterns, Duration.ZERO)
+            })
+            scheduleIds.add(pixelblaze.repeatOutbound({ GetAllPrograms }, refreshRates.allPatterns, Duration.ZERO))
         }
 
         if (!excludedOutboundTypes.contains(OutboundGetPlaylist)) {
-            pixelblaze.addWatcher(InboundPlaylist) { currPlaylistHolder.set(it) }
-            pixelblaze.repeatOutbound(
-                { GetPlaylist(Pixelblaze.DEFAULT_PLAYLIST) },
-                refreshRates.currPlaylist,
-                Duration.ZERO
+            watcherIds.add(pixelblaze.addWatcher(InboundPlaylist) { currPlaylistHolder.set(it) })
+            scheduleIds.add(
+                pixelblaze.repeatOutbound(
+                    { GetPlaylist(Pixelblaze.DEFAULT_PLAYLIST) },
+                    refreshRates.currPlaylist,
+                    Duration.ZERO
+                )
             )
         }
 
         //Finally we record the ones that just come on their own
-        pixelblaze.addWatcher(InboundSequencerState) { seqStateHolder.set(it) }
-        pixelblaze.addWatcher(InboundStats) { statsHolder.set(it) }
+        watcherIds.add(pixelblaze.addWatcher(InboundSequencerState) { seqStateHolder.set(it) })
+        watcherIds.add(pixelblaze.addWatcher(InboundStats) { statsHolder.set(it) })
     }
 
     suspend fun awaitFill(maxWait: Duration, awaitExpanders: Boolean = false): Boolean {
         return withTimeoutOrNull(maxWait) {
             while (
-                allPatternsHolder.get() == null &&
-                currPlaylistHolder.get() == null &&
+                (!excludedOutboundTypes.contains(OutboundGetAllPrograms) && allPatternsHolder.get() == null) &&
+                (!excludedOutboundTypes.contains(OutboundGetPlaylist) && currPlaylistHolder.get() == null) &&
+                (!excludedOutboundTypes.contains(OutboundGetSystemState) && seqStateHolder.get() == null) &&
+                (!excludedOutboundTypes.contains(OutboundGetPeers) && peersHolder.get() == null) &&
+                (!excludedOutboundTypes.contains(OutboundGetSystemState) && settingsHolder.get() == null) &&
                 statsHolder.get() == null &&
-                seqStateHolder.get() == null &&
-                peersHolder.get() == null &&
-                settingsHolder.get() == null &&
                 (awaitExpanders && expanderChannelsHolder.get() == null)
             ) {
                 delay(100.milliseconds)
@@ -92,19 +102,19 @@ class PixelblazeStateCache(
         } != null
     }
 
-    fun allPatterns(): Map<String, String>? = allPatternsHolder.get()
-    fun currentPlaylist(): Playlist? = currPlaylistHolder.get()
-    fun patternName(patternId: String): String? = allPatternsHolder.get()?.get(patternId)
-    fun lastStats(): Stats? = statsHolder.get()
-    fun sequencerState(): SequencerState? = seqStateHolder.get()
-    fun settings(): Settings? = settingsHolder.get()
-    fun peers(): Peers? = peersHolder.get()
-    fun currentPlaylistIndex(): UInt? = seqStateHolder.get()?.playlistState?.position?.toUInt()
-    fun nextPlaylistIndex(): UInt? = calcPositionChange { position, len -> (position + 1) % len }
-    fun prevPlaylistIndex(): UInt? = calcPositionChange { position, len -> (position + len - 1) % len }
+    fun allPatterns(): Map<String, String>? = throwIfClosed(allPatternsHolder.get())
+    fun currentPlaylist(): Playlist? = throwIfClosed(currPlaylistHolder.get())
+    fun patternName(patternId: String): String? = throwIfClosed(allPatternsHolder.get()?.get(patternId))
+    fun lastStats(): Stats? = throwIfClosed(statsHolder.get())
+    fun sequencerState(): SequencerState? = throwIfClosed(seqStateHolder.get())
+    fun settings(): Settings? = throwIfClosed(settingsHolder.get())
+    fun peers(): Peers? = throwIfClosed(peersHolder.get())
+    fun currentPlaylistIndex(): UInt? = throwIfClosed(seqStateHolder.get()?.playlistState?.position?.toUInt())
+    fun nextPlaylistIndex(): UInt? = throwIfClosed(calcPositionChange { position, len -> (position + 1) % len })
+    fun prevPlaylistIndex(): UInt? = throwIfClosed(calcPositionChange { position, len -> (position + len - 1) % len })
 
     fun patternAtPosition(position: UInt): NamedPattern? {
-        return when (val playlist = currPlaylistHolder.get()) {
+        return throwIfClosed(when (val playlist = currPlaylistHolder.get()) {
             null -> null
             else -> when (val allPatterns = allPatternsHolder.get()) {
                 null -> null
@@ -115,7 +125,7 @@ class PixelblazeStateCache(
                     }
                 }
             }
-        }
+        })
     }
 
     private fun calcPositionChange(calc: (Int, Int) -> Int): UInt? {
@@ -133,5 +143,23 @@ class PixelblazeStateCache(
                 }
             }
         }
+    }
+
+    private fun <T> throwIfClosed(t: T): T {
+        if (isClosed()) {
+            throw IllegalStateException("Attempt to read from a closed state cache instance")
+        }
+        
+        return t
+    }
+    
+    fun isClosed(): Boolean {
+        return closeCalled.get()
+    }
+
+    override fun close() {
+        closeCalled.set(true)
+        scheduleIds.forEach { pixelblaze.cancelRepeatedOutbound(it) }
+        watcherIds.forEach { pixelblaze.removeWatcher(it) }
     }
 }
