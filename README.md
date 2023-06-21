@@ -187,4 +187,4 @@ Contributing
 ------------
 
 Contributions, especially of new inbound and outbound message definitions, is very welcome. The project is governed by
-the [Contributor Covenent](ContributorCovenent.md).
+the [Contributor Covenant](ContributorCovenant.md).
