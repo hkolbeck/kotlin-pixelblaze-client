@@ -12,7 +12,7 @@ import kotlin.time.Duration.Companion.seconds
 suspend fun main() {
     val pixelblaze = WebsocketPixelblaze.defaultBuilder()
         .setPixelblazeIp("10.0.0.68")
-        .setErrorLog {str, t ->
+        .setErrorLog {t, str ->
             println("Error: '${str()}', thrown: '${t?.message ?: "Nothing"}'")
             t?.printStackTrace()
         }.setInfoLog { str -> println("Info: '${str()}'") }

@@ -22,8 +22,8 @@ class TestBinaryParsers {
     // parse binary utility function to get an initial split of the frame, which takes some introspection into watcher
     // state
     private val pixelblaze = WebsocketPixelblaze.defaultBuilder()
-        .setConnectionWatcher { connectionEvent, s, throwable ->
-            println("Event: $connectionEvent, msg: '$s', thrown: ${throwable?.message}, stack: ${throwable?.stackTrace}")
+        .setConnectionWatcher { connectionEvent, throwable, s  ->
+            println("Event: $connectionEvent, msg: '${s()}', thrown: ${throwable?.message}, stack: ${throwable?.stackTrace}")
         }
         .build()
 
@@ -89,7 +89,7 @@ class TestBinaryParsers {
         assertEquals(InboundAllPrograms, type)
         val allPrograms = AllPrograms.fromBinary(stream)!!
 
-        val expected = readExpected("/binary_samples/expected/qll_programs.csv")
+        val expected = readExpected("/binary_samples/expected/all_programs.csv")
             .inputStream()
             .bufferedReader()
             .lines()

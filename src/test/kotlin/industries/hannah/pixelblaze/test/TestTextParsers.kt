@@ -11,7 +11,6 @@ import kotlin.test.assertEquals
  * Test playlist parse functions. Raw json objects were sniffed from the interactions between the standard UI and
  * the Pixelblaze. At present none use Gson adapters because the parse code was copied over from C++.
  */
-@Ignore("Need to collect raw requests and fill out the expected fields")
 class TestTextParsers {
 
     private val gson = Gson()
@@ -19,22 +18,40 @@ class TestTextParsers {
     @Test
     fun testParseSequencerState() {
         val raw = """
-{"activeProgram":{"name":"color bands","activeProgramId":"vmCXgwbox8nCBqQig","controls":{}},"sequencerMode":2,"runSequencer":true,"playlist":{"position":1,"id":"_defaultplaylist_","ms":30000,"remainingMs":6549}}
+            {
+                "activeProgram": {
+                    "name":"color bands",
+                    "activeProgramId":"vmCXgwbox8nCBqQig",
+                    "controls":{
+                        "sliderSomeVar": 0.75
+                    }
+                },
+                "sequencerMode":2,
+                "runSequencer":true,
+                "playlist":{
+                    "position":1,
+                    "id":"_defaultplaylist_",
+                    "ms":30000,
+                    "remainingMs":6549
+                }
+            }
         """
         val expected = SequencerState(
             activeProgram = ActiveProgram(
-                name = "",
-                id = "",
-                controls = listOf()
+                name = "color bands",
+                id = "vmCXgwbox8nCBqQig",
+                controls = listOf(
+                    Control("sliderSomeVar", 0.75F)
+                )
             ),
             playlistState = PlaylistState(
-                position = 0,
-                id = "",
-                ttlMs = 0,
-                remainingMs = 0,
+                position = 1,
+                id = "_defaultplaylist_",
+                ttlMs = 30000,
+                remainingMs = 6549,
             ),
-            sequencerMode = SequencerMode.Off,
-            runSequencer = false
+            sequencerMode = SequencerMode.Playlist,
+            runSequencer = true
         )
         assertEquals(expected, SequencerState.fromText(gson, raw))
     }
@@ -42,20 +59,52 @@ class TestTextParsers {
     @Test
     fun testParseSettings() {
         val raw = """
-{"name":"Pixelblaze_682855","brandName":"","pixelCount":100,"brightness":1,"maxBrightness":10,"colorOrder":"BGR","dataSpeed":3500000,"ledType":2,"sequenceTimer":15,"transitionDuration":0,"sequencerMode":2,"runSequencer":true,"simpleUiMode":false,"learningUiMode":false,"discoveryEnable":true,"timezone":"","autoOffEnable":false,"autoOffStart":"00:00","autoOffEnd":"00:00","cpuSpeed":240,"networkPowerSave":false,"mapperFit":0,"leaderId":0,"nodeId":0,"soundSrc":0,"accelSrc":0,"lightSrc":0,"analogSrc":0,"exp":0,"ver":"3.40","chipId":6826069}
+            {
+                "name":"Pixelblaze_682855",
+                "brandName":"",
+                "pixelCount":100,
+                "brightness":1,
+                "maxBrightness":10,
+                "colorOrder":"BGR",
+                "dataSpeed":3500000,
+                "ledType":2,
+                "sequenceTimer":15,
+                "transitionDuration":0,
+                "sequencerMode":2,
+                "runSequencer":true,
+                "simpleUiMode":false,
+                "learningUiMode":false,
+                "discoveryEnable":true,
+                "timezone":"",
+                "autoOffEnable":true,
+                "autoOffStart":"23:00",
+                "autoOffEnd":"00:00",
+                "cpuSpeed":240,
+                "networkPowerSave":false,
+                "mapperFit":0,
+                "leaderId":0,
+                "nodeId":0,
+                "soundSrc":0,
+                "accelSrc":1,
+                "lightSrc":0,
+                "analogSrc":1,
+                "exp":0,
+                "ver":"3.40",
+                "chipId":6826069
+            }
         """
         val expected = Settings(
-            typeName = "",
+            name = "Pixelblaze_682855",
             brandName = "",
-            pixelCount = 0,
-            brightness = 0.0f,
-            maxBrightness = 0.0f,
+            pixelCount = 100,
+            brightness = 1.0F,
+            maxBrightness = 0.1F,
             colorOrder = ColorOrder.BGR,
-            dataSpeedHz = 0,
+            dataSpeedHz = 3500000,
             ledType = LedType.WS2812_SK6812_NEOPIXEL,
-            sequenceTimerMs = 0,
+            sequenceTimerSeconds = 15,
             transitionDurationMs = 0,
-            sequencerMode = SequencerMode.ShuffleAll,
+            sequencerMode = SequencerMode.Playlist,
             runSequencer = true,
             simpleUiMode = false,
             learningUiMode = false,
@@ -64,18 +113,18 @@ class TestTextParsers {
             autoOffEnable = true,
             autoOffStart = "23:00",
             autoOffEnd = "00:00",
-            cpuSpeedMhz = 0,
+            cpuSpeedMhz = 240,
             networkPowerSave = false,
             mapperFit = 0,
             leaderId = 0,
             nodeId = 0,
-            soundSrc = InputSource.Local,
-            lightSrc = InputSource.Local,
-            accelSrc = InputSource.Remote,
-            analogSrc = InputSource.Remote,
+            soundSrc = InputSource.Remote,
+            lightSrc = InputSource.Remote,
+            accelSrc = InputSource.Local,
+            analogSrc = InputSource.Local,
             exp = 0,
-            version = "",
-            chipId = 0,
+            version = "3.40",
+            chipId = 6826069,
         )
 
         assertEquals(expected, Settings.fromText(gson, raw))
@@ -107,20 +156,33 @@ class TestTextParsers {
     @Test
     fun testParseStats() {
         val raw = """
-            {"fps":177.8222,"vmerr":0,"vmerrpc":-1,"mem":10239,"exp":0,"renderType":1,"uptime":159889,"storageUsed":804706,"storageSize":1378241,"rr0":1,"rr1":14,"rebootCounter":0}
+            {
+                "fps":177.8222,
+                "vmerr":0,
+                "vmerrpc":-1,
+                "mem":10239,
+                "exp":0,
+                "renderType":1,
+                "uptime":159889,
+                "storageUsed":804706,
+                "storageSize":1378241,
+                "rr0":1,
+                "rr1":14,
+                "rebootCounter":0
+            }
         """
         val expected = Stats(
-            fps = 0F,
+            fps = 177.8222F,
             vmerr = 0,
-            vmerrpc = 0,
-            memBytes = 0,
+            vmerrpc = -1,
+            memBytes = 10239,
             expansions = 0,
-            renderType = RenderType.Invalid,
-            uptimeMs = 0,
-            storageBytesUsed = 0,
-            storageBytesSize = 0,
-            rr0 = 0,
-            rr1 = 0,
+            renderType = RenderType._1D,
+            uptimeMs = 159889,
+            storageBytesUsed = 804706,
+            storageBytesSize = 1378241,
+            rr0 = 1,
+            rr1 = 14,
             rebootCounter = 0,
         )
         assertEquals(expected, Stats.fromText(gson, raw))
@@ -129,14 +191,33 @@ class TestTextParsers {
     @Test
     fun testParsePlaylist() {
         val raw = """
-{"playlist":{"position":1,"id":"_defaultplaylist_","ms":30000,"remainingMs":6535,"items":[{"id":"QqZqNsLmk2CAvheRR","ms":30000},{"id":"vmCXgwbox8nCBqQig","ms":30000},{"id":"p49GpaZRpfGHPNGuX","ms":30000},{"id":"wPnJGj5d5hzgeLbZD","ms":30000},{"id":"LR4KPE7qNStxaFMaA","ms":30000},{"id":"Ktjben4j36Wqxnk8N","ms":30000},{"id":"BxgkrQTHPkhcM6a24","ms":30000},{"id":"36h5YYz2jeCqkiZjj","ms":30000},{"id":"pxH7PgGxoM7WPrFWs","ms":30000},{"id":"iYDPEfGzNLkCiHdnG","ms":30000},{"id":"aE5YEvSnbXWsu5ob2","ms":30000},{"id":"9YNBonyhXfyFjpYzJ","ms":30000},{"id":"Qvqmzcuci43MSBYij","ms":30000},{"id":"D2xuondCcLLi2jvMr","ms":30000},{"id":"QqZqNsLmk2CAvheRR","ms":30000}]}}
+            {
+                "playlist":{
+                    "position":1,
+                    "id":"_defaultplaylist_",
+                    "ms":30000,
+                    "remainingMs":6535,
+                    "items":[
+                        {
+                            "id":"QqZqNsLmk2CAvheRR",
+                            "ms":30000
+                        },{
+                            "id":"vmCXgwbox8nCBqQig",
+                            "ms":30000
+                        }
+                    ]
+                }
+            }
         """
         val expected = Playlist(
-            id = "",
-            position = 0,
-            currentDurationMs = 0,
-            remainingCurrentMs = 0,
-            patterns = listOf(),
+            id = "_defaultplaylist_",
+            position = 1,
+            currentDurationMs = 30000,
+            remainingMs = 6535,
+            patterns = listOf(
+                PixelblazePattern("QqZqNsLmk2CAvheRR", 30000),
+                PixelblazePattern("vmCXgwbox8nCBqQig", 30000)
+            )
         )
         assertEquals(expected, Playlist.fromText(gson, raw))
     }
@@ -144,12 +225,28 @@ class TestTextParsers {
     @Test
     fun testParsePlaylistUpdate() {
         val raw = """
-{"playlist":{"id":"_defaultplaylist_","items":[{"id":"QqZqNsLmk2CAvheRR","ms":30000},{"id":"vmCXgwbox8nCBqQig","ms":30000},{"id":"p49GpaZRpfGHPNGuX","ms":30000},{"id":"wPnJGj5d5hzgeLbZD","ms":30000},{"id":"LR4KPE7qNStxaFMaA","ms":30000},{"id":"Ktjben4j36Wqxnk8N","ms":30000},{"id":"BxgkrQTHPkhcM6a24","ms":30000},{"id":"36h5YYz2jeCqkiZjj","ms":30000},{"id":"pxH7PgGxoM7WPrFWs","ms":30000},{"id":"iYDPEfGzNLkCiHdnG","ms":30000},{"id":"aE5YEvSnbXWsu5ob2","ms":30000},{"id":"9YNBonyhXfyFjpYzJ","ms":30000},{"id":"Qvqmzcuci43MSBYij","ms":30000},{"id":"D2xuondCcLLi2jvMr","ms":30000},{"id":"QqZqNsLmk2CAvheRR","ms":30000},{"id":"vkpGsR88dcJmXfevp","ms":30000}]},"save":true}
+            {
+                "playlist":{
+                    "id":"_defaultplaylist_",
+                    "items":[
+                        {
+                            "id":"QqZqNsLmk2CAvheRR",
+                            "ms":30000
+                        },{
+                            "id":"vmCXgwbox8nCBqQig",
+                            "ms":30000
+                        }
+                    ]
+                }
+            }
         """
 
         val expected = PlaylistUpdate(
-            id = "",
-            patterns = listOf()
+            id = "_defaultplaylist_",
+            patterns = listOf(
+                PixelblazePattern("QqZqNsLmk2CAvheRR", 30000),
+                PixelblazePattern("vmCXgwbox8nCBqQig", 30000)
+            )
         )
 
         assertEquals(expected, PlaylistUpdate.fromText(gson, raw))

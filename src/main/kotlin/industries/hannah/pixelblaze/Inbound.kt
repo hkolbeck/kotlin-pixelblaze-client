@@ -161,7 +161,7 @@ data class SequencerState(
             return SequencerState(
                 activeProgram = ActiveProgram(
                     name = activeProgram["name"].asString,
-                    id = activeProgram["id"].asString,
+                    id = activeProgram["activeProgramId"].asString,
                     controls = activeProgram["controls"].asJsonObject.asMap().map {
                         Control(
                             name = it.key,
@@ -191,7 +191,7 @@ data class Settings(
     val colorOrder: ColorOrder,
     val dataSpeedHz: Int,
     val ledType: LedType,
-    val sequenceTimerMs: Int,
+    val sequenceTimerSeconds: Int,
     val transitionDurationMs: Int,
     val sequencerMode: SequencerMode,
     val runSequencer: Boolean,
@@ -230,9 +230,9 @@ data class Settings(
                 brightness = json["brightness"].asFloat,
                 maxBrightness = json["maxBrightness"].asFloat / 100.0f,
                 colorOrder = ColorOrder.fromString(json["colorOrder"].asString) ?: ColorOrder.BGR,
-                dataSpeedHz = json["dataSpeedHz"].asInt,
+                dataSpeedHz = json["dataSpeed"].asInt,
                 ledType = LedType.fromInt(json["ledType"].asInt) ?: LedType.None,
-                sequenceTimerMs = json["sequenceTimer"].asInt,
+                sequenceTimerSeconds = json["sequenceTimer"].asInt,
                 transitionDurationMs = json["transitionDuration"].asInt,
                 sequencerMode = SequencerMode.fromInt(json["sequencerMode"].asInt) ?: SequencerMode.Off,
                 runSequencer = json["runSequencer"].asBoolean,
@@ -309,7 +309,7 @@ data class Playlist(
     val id: String,
     val position: Int,
     val currentDurationMs: Int,
-    val remainingCurrentMs: Int,
+    val remainingMs: Int,
     val patterns: List<PixelblazePattern>,
 ) : InboundMessage {
     companion object {
@@ -329,7 +329,7 @@ data class Playlist(
                 id = playlistObj["id"].asString,
                 position = playlistObj["position"].asInt,
                 currentDurationMs = playlistObj["ms"].asInt,
-                remainingCurrentMs = playlistObj["remainingMs"].asInt,
+                remainingMs = playlistObj["remainingMs"].asInt,
                 patterns = playlistObj["items"].asJsonArray.map {
                     val asObj = it.asJsonObject
                     PixelblazePattern(

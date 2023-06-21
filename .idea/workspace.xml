@@ -4,13 +4,13 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="bac320fe-f3d8-48cb-8294-7d2b1eca689a" name="Changes" comment="Naming of various actors for better logging, still need to update logs around them">
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/Enums.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/Enums.kt" afterDir="false" />
+    <list default="true" id="bac320fe-f3d8-48cb-8294-7d2b1eca689a" name="Changes" comment="L O G G I N G">
+      <change afterPath="$PROJECT_DIR$/src/test/resources/binary_samples/expected/all_programs.csv" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/resources/binary_samples/expected/preview_frame.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/Inbound.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/Inbound.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/Pixelblaze.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/Pixelblaze.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/PixelblazeConfig.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/PixelblazeConfig.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/PixelblazeStateCache.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/PixelblazeStateCache.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/WebsocketPixelblaze.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/WebsocketPixelblaze.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/kotlin/industries/hannah/pixelblaze/test/BinaryExampleFetcher.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/kotlin/industries/hannah/pixelblaze/test/BinaryExampleFetcher.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/kotlin/industries/hannah/pixelblaze/test/TestBinaryParsers.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/kotlin/industries/hannah/pixelblaze/test/TestBinaryParsers.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/test/kotlin/industries/hannah/pixelblaze/test/TestTextParsers.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/kotlin/industries/hannah/pixelblaze/test/TestTextParsers.kt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -69,7 +69,7 @@
       <recent name="industries.hannah.pixelblaze" />
     </key>
   </component>
-  <component name="RunManager" selected="Kotlin.BinaryExampleFetcherKt">
+  <component name="RunManager" selected="Gradle.TestTextParsers">
     <configuration name="TestTextParsers" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
       <ExternalSystemSettings>
         <option name="executionName" />
@@ -148,8 +148,8 @@
     </configuration>
     <recent_temporary>
       <list>
-        <item itemvalue="Kotlin.BinaryExampleFetcherKt" />
         <item itemvalue="Gradle.TestTextParsers" />
+        <item itemvalue="Kotlin.BinaryExampleFetcherKt" />
         <item itemvalue="Gradle.TestTextParsers.testParseDiscovery" />
         <item itemvalue="Gradle.TestUtilityFunctions" />
       </list>
@@ -164,7 +164,7 @@
       <option name="presentableId" value="Default" />
       <updated>1686884861554</updated>
       <workItem from="1686884863004" duration="197270000" />
-      <workItem from="1687298224263" duration="35832000" />
+      <workItem from="1687298224263" duration="37527000" />
     </task>
     <task id="LOCAL-00001" summary="lol git">
       <created>1686965358941</created>
@@ -348,7 +348,14 @@
       <option name="project" value="LOCAL" />
       <updated>1687329909021</updated>
     </task>
-    <option name="localTasksCounter" value="27" />
+    <task id="LOCAL-00027" summary="L O G G I N G">
+      <created>1687336193924</created>
+      <option name="number" value="00027" />
+      <option name="presentableId" value="LOCAL-00027" />
+      <option name="project" value="LOCAL" />
+      <updated>1687336193924</updated>
+    </task>
+    <option name="localTasksCounter" value="28" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -366,7 +373,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="lol git pt2" />
     <MESSAGE value="Gettin' there" />
     <MESSAGE value="Total revamp" />
     <MESSAGE value="Total revamp, continued" />
@@ -391,6 +397,7 @@
     <MESSAGE value="Add new builder requirements to README section on bareBuilder()" />
     <MESSAGE value="Make default reconnect strategy an exponential backoff, cleanup a few things in the README" />
     <MESSAGE value="Naming of various actors for better logging, still need to update logs around them" />
-    <option name="LAST_COMMIT_MESSAGE" value="Naming of various actors for better logging, still need to update logs around them" />
+    <MESSAGE value="L O G G I N G" />
+    <option name="LAST_COMMIT_MESSAGE" value="L O G G I N G" />
   </component>
 </project>
