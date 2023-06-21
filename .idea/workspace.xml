@@ -4,27 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="bac320fe-f3d8-48cb-8294-7d2b1eca689a" name="Changes" comment="Add notes about contributions">
-      <change afterPath="$PROJECT_DIR$/src/test/kotlin/industries/hannah/pixelblaze/test/TestBinaryParsers.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/test/kotlin/industries/hannah/pixelblaze/test/TestTextParsers.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/test/kotlin/industries/hannah/pixelblaze/test/TestUtilityFunctions.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/test/kotlin/industries/hannah/pixelblaze/test/functional/TestBasicOperation.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/test/kotlin/industries/hannah/pixelblaze/test/functional/TestStateCache.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/test/resources/binary_samples/inbound/all_programs.b64" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/test/resources/binary_samples/inbound/expander_channels.b64" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/test/resources/binary_samples/inbound/preview_frame.b64" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/test/resources/binary_samples/inbound/preview_image.b64" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/gradle.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/gradle.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/build.gradle.kts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/gradle.properties" beforeDir="false" afterPath="$PROJECT_DIR$/gradle.properties" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/Discovery.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/Discovery.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/Enums.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/Enums.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/Inbound.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/Inbound.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/Outbound.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/Outbound.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/Pixelblaze.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/Pixelblaze.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/PixelblazeStateCache.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/PixelblazeStateCache.kt" afterDir="false" />
+    <list default="true" id="bac320fe-f3d8-48cb-8294-7d2b1eca689a" name="Changes" comment="First sketch of tests">
       <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/WebsocketPixelblaze.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/WebsocketPixelblaze.kt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -170,7 +150,7 @@
       <option name="presentableId" value="Default" />
       <updated>1686884861554</updated>
       <workItem from="1686884863004" duration="197270000" />
-      <workItem from="1687298224263" duration="14226000" />
+      <workItem from="1687298224263" duration="14757000" />
     </task>
     <task id="LOCAL-00001" summary="lol git">
       <created>1686965358941</created>
@@ -305,7 +285,14 @@
       <option name="project" value="LOCAL" />
       <updated>1687297402252</updated>
     </task>
-    <option name="localTasksCounter" value="20" />
+    <task id="LOCAL-00020" summary="First sketch of tests">
+      <created>1687313869049</created>
+      <option name="number" value="00020" />
+      <option name="presentableId" value="LOCAL-00020" />
+      <option name="project" value="LOCAL" />
+      <updated>1687313869049</updated>
+    </task>
+    <option name="localTasksCounter" value="21" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -342,6 +329,7 @@
     <MESSAGE value="Only parse if there's a watcher, add a utility method, add docs to interface" />
     <MESSAGE value="Fill out README" />
     <MESSAGE value="Add notes about contributions" />
-    <option name="LAST_COMMIT_MESSAGE" value="Add notes about contributions" />
+    <MESSAGE value="First sketch of tests" />
+    <option name="LAST_COMMIT_MESSAGE" value="First sketch of tests" />
   </component>
 </project>

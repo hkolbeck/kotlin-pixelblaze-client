@@ -116,26 +116,29 @@ class WebsocketPixelblaze internal constructor(
         isMine: (Resp) -> Boolean
     ): Resp? {
         val guard = AtomicBoolean(false)
+        var id: WatcherID? = null
 
-        return suspendCoroutineWithTimeout(maxWait) { continuation ->
-            var id: WatcherID? = null
-            val watchFn: (Resp) -> Unit = { resp: Resp ->
-                //Check if this resp matches our request and if the watcher has been invoked, bail if it has
-                if (isMine(resp) && !guard.getAndSet(true)) {
-                    continuation.resume(resp)
-                    removeWatcher(id!!)
+        return try {
+            suspendCoroutineWithTimeout(maxWait) { continuation ->
+                val watchFn: (Resp) -> Unit = { resp: Resp ->
+                    //Check if this resp matches our request and if the watcher has been invoked, bail if it has
+                    if (isMine(resp) && !guard.getAndSet(true)) {
+                        continuation.resume(resp)
+                    }
                 }
-            }
 
-            id = addWatcher(inboundType, watchFn)
-            issueOutbound(msg)
+                id = addWatcher(inboundType, watchFn)
+                issueOutbound(msg)
+            }
+        } finally {
+            id?.run { removeWatcher(this) }
         }
     }
 
     private suspend inline fun <T> suspendCoroutineWithTimeout(
         timeout: Duration,
         crossinline block: (Continuation<T>) -> Unit
-    ) = withTimeout(timeout) {
+    ) = withTimeoutOrNull(timeout) {
         suspendCancellableCoroutine(block = block)
     }
 
