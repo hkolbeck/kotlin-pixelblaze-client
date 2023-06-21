@@ -49,14 +49,13 @@ val pixelblaze = WebsocketPixelblaze.bareBuilder()
         PixelblazeConfig(
             ...
     ))
-.setHttpClient(HttpClient {
-    install(WebSockets) // Must install WebSockets, no other HttpClient needs
-})
-    // Mess with parsers and watchers...    
+    .setHttpClient(HttpClient {
+        install(WebSockets) // Must install WebSockets, no other HttpClient needs
+    })
+    .setIoLoopDispatcher(Dispatchers.IO)
+    .setRepeatedOutboundDispatcher(Dispatchers.Default)
+    .setSaveAfterDispatcher(Dispatchers.Default)
     .build()
-
-
-
 ```
 
 Sending Outbound Messages
