@@ -19,6 +19,8 @@ dependencies {
     implementation("io.ktor:ktor-client-websockets:$ktorVersion")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.1")
     implementation("com.google.code.gson:gson:2.10.1")
+//    implementation("com.squareup:gifencoder:0.10.1")
+//    implementation("com.squareup.picasso:picasso:2.71828")
 
     testImplementation(kotlin("test"))
     testImplementation(platform("org.junit:junit-bom:5.9.3"))

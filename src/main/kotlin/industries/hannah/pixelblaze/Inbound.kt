@@ -8,8 +8,8 @@ import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
 import java.io.DataInputStream
 import java.io.InputStream
+import java.io.PushbackInputStream
 import java.lang.reflect.Type
-import javax.imageio.ImageIO
 import kotlin.streams.toList
 
 sealed interface Inbound<T : InboundMessage> {
@@ -39,11 +39,11 @@ abstract class InboundBinary<T : InboundMessage>(val binaryFlag: Byte) : Inbound
 
 object InboundPreviewImage : InboundBinary<PreviewImage>(4)
 
-object InboundPreviewFrame : InboundBinary<PreviewFrame>(5) 
+object InboundPreviewFrame : InboundBinary<PreviewFrame>(5)
 
-object InboundAllPrograms : InboundBinary<AllPrograms>(7) 
+object InboundAllPrograms : InboundBinary<AllPrograms>(7)
 
-object InboundExpanderChannels : InboundBinary<ExpanderChannels>(9) 
+object InboundExpanderChannels : InboundBinary<ExpanderChannels>(9)
 
 class InboundRawBinary<T : InboundMessage>(binaryFlag: Byte) : InboundBinary<T>(binaryFlag)
 
@@ -69,14 +69,14 @@ abstract class InboundText<T : InboundMessage>(val extractedType: Type) : Inboun
     override fun toString(): String = this.javaClass.name
 }
 
-object InboundStats : InboundText<Stats>(Stats::class.java) 
-object InboundSequencerState : InboundText<SequencerState>(SequencerState::class.java) 
-object InboundSettings : InboundText<Settings>(Settings::class.java) 
-object InboundPeers : InboundText<Peers>(Peers::class.java) 
-object InboundPlaylist : InboundText<Playlist>(Playlist::class.java) 
-object InboundPlaylistUpdate : InboundText<PlaylistUpdate>(PlaylistUpdate::class.java) 
-object InboundAck : InboundText<Ack>(Ack::class.java) 
-class InboundParsedText<T : InboundMessage>(extractedType: Type) : InboundText<T>(extractedType) 
+object InboundStats : InboundText<Stats>(Stats::class.java)
+object InboundSequencerState : InboundText<SequencerState>(SequencerState::class.java)
+object InboundSettings : InboundText<Settings>(Settings::class.java)
+object InboundPeers : InboundText<Peers>(Peers::class.java)
+object InboundPlaylist : InboundText<Playlist>(Playlist::class.java)
+object InboundPlaylistUpdate : InboundText<PlaylistUpdate>(PlaylistUpdate::class.java)
+object InboundAck : InboundText<Ack>(Ack::class.java)
+class InboundParsedText<T : InboundMessage>(extractedType: Type) : InboundText<T>(extractedType)
 
 interface InboundMessage
 
@@ -434,52 +434,65 @@ data class ExpanderChannels(
 
 data class PreviewImage(
     val patternId: String,
-    val img: BufferedImage
+    val imgBytes: InputStream
 ) : InboundMessage {
+
+//    fun expandRow(row: UInt, width: UInt, height: UInt):  {
+//        val actualRow = row.toInt() % img.height
+//        val subImage = img.getSubimage(actualRow, 0, img.width, 1)
+//        return subImage.getScaledInstance(width.toInt(), height.toInt(), Image.SCALE_FAST)
+//    }
+//
+//    private fun javaImageToGifImage(img: Image): GifImage {
+//
+//    }
+//
+//    fun animate(width: UInt, height: UInt, frameDelay: Duration, outputStream: OutputStream): Boolean {
+//        val gifEncoder = GifEncoder(outputStream, width.toInt(), height.toInt(), 0)
+//        for (row in 0 until img.height) {
+//            gifEncoder.addImage(javaImageToGifImage(expandRow(row.toUInt(), width, height)), ImageOptions())
+//        }
+//
+//
+//    }
+
     companion object {
         fun fromBinary(stream: InputStream): PreviewImage? {
-            val imageIdBuffer = ArrayList<Byte>(16)
-            var read = stream.read()
+            val unreadable = PushbackInputStream(stream)
+            val idBuilder = StringBuilder()
+            var read = unreadable.read()
             while (read in 1..254) {
-                imageIdBuffer.add(read.toByte())
-                read = stream.read()
+                idBuilder.append(read.toChar())
+                read = unreadable.read()
             }
 
-            return try {
-                PreviewImage(String(imageIdBuffer.toByteArray()), ImageIO.read(stream))
-            } catch (t: Throwable) {
-                null
+            if (read == 255) {
+                unreadable.unread(read)
             }
+
+            return PreviewImage(idBuilder.toString(), unreadable)
         }
     }
-}
-
-data class Pixel(
-    val red: UByte,
-    val green: UByte,
-    val blue: UByte
-) {
-    fun toInt(): Int = (red.toInt() shl 16) or (green.toInt() shl 8) or blue.toInt()
 }
 
 //Per creator
 const val PREVIEW_FRAME_MAX_LEN = 1024
 
 data class PreviewFrame(
-    val pixels: List<Pixel>
+    val pixels: List<Int>
 ) : InboundMessage {
 
-    fun toImage(width: UInt, height: UInt): Image {
-        val buffer = pixels.map { it.toInt() }.toIntArray()
-        val image = BufferedImage(width.toInt(), height.toInt(), BufferedImage.TYPE_INT_ARGB)
-        image.setRGB(0, 0, buffer.size, 1, buffer, 0, 1)
-
-        return image.getScaledInstance(width.toInt(), height.toInt(), Image.SCALE_FAST)
-    }
+//    fun toImage(width: UInt, height: UInt): Image {
+//        val buffer = pixels.map { it }.toIntArray()
+//        val image = BufferedImage(width.toInt(), height.toInt(), BufferedImage.TYPE_INT_ARGB)
+//        image.setRGB(0, 0, buffer.size, 1, buffer, 0, 1)
+//
+//        return image.getScaledInstance(width.toInt(), height.toInt(), Image.SCALE_FAST)
+//    }
 
     companion object {
         fun fromBinary(stream: InputStream): PreviewFrame? {
-            val pixels = ArrayList<Pixel>(PREVIEW_FRAME_MAX_LEN)
+            val pixels = ArrayList<Int>(PREVIEW_FRAME_MAX_LEN)
 
             while (pixels.size < PREVIEW_FRAME_MAX_LEN) {
                 val red = stream.read()
@@ -490,7 +503,7 @@ data class PreviewFrame(
                     break;
                 }
 
-                pixels.add(Pixel(red.toUByte(), green.toUByte(), blue.toUByte()))
+                pixels.add((red shl 16) or (green shl 8) or blue)
             }
 
             return PreviewFrame(pixels)

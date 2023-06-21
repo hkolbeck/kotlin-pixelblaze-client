@@ -4,13 +4,13 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="bac320fe-f3d8-48cb-8294-7d2b1eca689a" name="Changes" comment="Json parsing tests passing">
+    <list default="true" id="bac320fe-f3d8-48cb-8294-7d2b1eca689a" name="Changes" comment="AllPrograms parsing works">
+      <change afterPath="$PROJECT_DIR$/src/test/resources/binary_samples/expected/preview_image.jpg" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/WebsocketPixelblaze.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/WebsocketPixelblaze.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/build.gradle.kts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/Inbound.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/Inbound.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/test/kotlin/industries/hannah/pixelblaze/test/TestBinaryParsers.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/kotlin/industries/hannah/pixelblaze/test/TestBinaryParsers.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/resources/binary_samples/expected/all_programs.csv" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/resources/binary_samples/expected/all_programs.csv" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/resources/binary_samples/inbound/all_programs.b64" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/resources/binary_samples/inbound/all_programs.b64" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/resources/binary_samples/expected/preview_frame.json" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/src/test/resources/binary_samples/inbound/preview_image.b64" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/resources/binary_samples/inbound/preview_image.b64" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -22,6 +22,16 @@
     <projectState path="$PROJECT_DIR$">
       <ProjectState />
     </projectState>
+  </component>
+  <component name="ExternalProjectsManager">
+    <system id="GRADLE">
+      <state>
+        <task path="$PROJECT_DIR$">
+          <activation />
+        </task>
+        <projects_view />
+      </state>
+    </system>
   </component>
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
@@ -48,18 +58,19 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
-    &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;project.structure.last.edited&quot;: &quot;Modules&quot;,
-    &quot;project.structure.proportion&quot;: &quot;0.17&quot;,
-    &quot;project.structure.side.proportion&quot;: &quot;0.2&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "WebServerToolWindowFactoryState": "false",
+    "nodejs_package_manager_path": "npm",
+    "project.structure.last.edited": "Modules",
+    "project.structure.proportion": "0.17",
+    "project.structure.side.proportion": "0.2",
+    "settings.editor.selected.configurable": "reference.settings.ide.settings.notifications"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/src/test/resources/binary_samples/inbound" />
@@ -69,7 +80,7 @@
       <recent name="industries.hannah.pixelblaze" />
     </key>
   </component>
-  <component name="RunManager" selected="Gradle.TestBinaryParsers">
+  <component name="RunManager" selected="Gradle.TestBinaryParsers.testPreviewFrameParser">
     <configuration name="TestBinaryParsers" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
       <ExternalSystemSettings>
         <option name="executionName" />
@@ -84,6 +95,75 @@
             <option value=":test" />
             <option value="--tests" />
             <option value="&quot;industries.hannah.pixelblaze.test.TestBinaryParsers&quot;" />
+          </list>
+        </option>
+        <option name="vmOptions" />
+      </ExternalSystemSettings>
+      <ExternalSystemDebugServerProcess>false</ExternalSystemDebugServerProcess>
+      <ExternalSystemReattachDebugProcess>true</ExternalSystemReattachDebugProcess>
+      <DebugAllEnabled>false</DebugAllEnabled>
+      <method v="2" />
+    </configuration>
+    <configuration name="TestBinaryParsers.testPreviewFrameParser" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
+      <ExternalSystemSettings>
+        <option name="executionName" />
+        <option name="externalProjectPath" value="$PROJECT_DIR$" />
+        <option name="externalSystemIdString" value="GRADLE" />
+        <option name="scriptParameters" value="" />
+        <option name="taskDescriptions">
+          <list />
+        </option>
+        <option name="taskNames">
+          <list>
+            <option value=":test" />
+            <option value="--tests" />
+            <option value="&quot;industries.hannah.pixelblaze.test.TestBinaryParsers.testPreviewFrameParser&quot;" />
+          </list>
+        </option>
+        <option name="vmOptions" />
+      </ExternalSystemSettings>
+      <ExternalSystemDebugServerProcess>false</ExternalSystemDebugServerProcess>
+      <ExternalSystemReattachDebugProcess>true</ExternalSystemReattachDebugProcess>
+      <DebugAllEnabled>false</DebugAllEnabled>
+      <method v="2" />
+    </configuration>
+    <configuration name="TestBinaryParsers.testPreviewFrameToImage" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
+      <ExternalSystemSettings>
+        <option name="executionName" />
+        <option name="externalProjectPath" value="$PROJECT_DIR$" />
+        <option name="externalSystemIdString" value="GRADLE" />
+        <option name="scriptParameters" value="" />
+        <option name="taskDescriptions">
+          <list />
+        </option>
+        <option name="taskNames">
+          <list>
+            <option value=":test" />
+            <option value="--tests" />
+            <option value="&quot;industries.hannah.pixelblaze.test.TestBinaryParsers.testPreviewFrameToImage&quot;" />
+          </list>
+        </option>
+        <option name="vmOptions" />
+      </ExternalSystemSettings>
+      <ExternalSystemDebugServerProcess>false</ExternalSystemDebugServerProcess>
+      <ExternalSystemReattachDebugProcess>true</ExternalSystemReattachDebugProcess>
+      <DebugAllEnabled>false</DebugAllEnabled>
+      <method v="2" />
+    </configuration>
+    <configuration name="TestBinaryParsers.testPreviewImageParser" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
+      <ExternalSystemSettings>
+        <option name="executionName" />
+        <option name="externalProjectPath" value="$PROJECT_DIR$" />
+        <option name="externalSystemIdString" value="GRADLE" />
+        <option name="scriptParameters" value="" />
+        <option name="taskDescriptions">
+          <list />
+        </option>
+        <option name="taskNames">
+          <list>
+            <option value=":test" />
+            <option value="--tests" />
+            <option value="&quot;industries.hannah.pixelblaze.test.TestBinaryParsers.testPreviewImageParser&quot;" />
           </list>
         </option>
         <option name="vmOptions" />
@@ -116,66 +196,13 @@
       <DebugAllEnabled>false</DebugAllEnabled>
       <method v="2" />
     </configuration>
-    <configuration name="TestTextParsers.testParseDiscovery" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
-      <ExternalSystemSettings>
-        <option name="executionName" />
-        <option name="externalProjectPath" value="$PROJECT_DIR$" />
-        <option name="externalSystemIdString" value="GRADLE" />
-        <option name="scriptParameters" value="" />
-        <option name="taskDescriptions">
-          <list />
-        </option>
-        <option name="taskNames">
-          <list>
-            <option value=":test" />
-            <option value="--tests" />
-            <option value="&quot;industries.hannah.pixelblaze.test.TestTextParsers.testParseDiscovery&quot;" />
-          </list>
-        </option>
-        <option name="vmOptions" />
-      </ExternalSystemSettings>
-      <ExternalSystemDebugServerProcess>false</ExternalSystemDebugServerProcess>
-      <ExternalSystemReattachDebugProcess>true</ExternalSystemReattachDebugProcess>
-      <DebugAllEnabled>false</DebugAllEnabled>
-      <method v="2" />
-    </configuration>
-    <configuration name="TestUtilityFunctions" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
-      <ExternalSystemSettings>
-        <option name="executionName" />
-        <option name="externalProjectPath" value="$PROJECT_DIR$" />
-        <option name="externalSystemIdString" value="GRADLE" />
-        <option name="scriptParameters" value="" />
-        <option name="taskDescriptions">
-          <list />
-        </option>
-        <option name="taskNames">
-          <list>
-            <option value=":test" />
-            <option value="--tests" />
-            <option value="&quot;industries.hannah.pixelblaze.test.TestUtilityFunctions&quot;" />
-          </list>
-        </option>
-        <option name="vmOptions" />
-      </ExternalSystemSettings>
-      <ExternalSystemDebugServerProcess>false</ExternalSystemDebugServerProcess>
-      <ExternalSystemReattachDebugProcess>true</ExternalSystemReattachDebugProcess>
-      <DebugAllEnabled>false</DebugAllEnabled>
-      <method v="2" />
-    </configuration>
-    <configuration name="BinaryExampleFetcherKt" type="JetRunConfigurationType" temporary="true" nameIsGenerated="true">
-      <option name="MAIN_CLASS_NAME" value="industries.hannah.pixelblaze.test.BinaryExampleFetcherKt" />
-      <module name="kotlin-pixelblaze-client.test" />
-      <method v="2">
-        <option name="Make" enabled="true" />
-      </method>
-    </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Gradle.TestBinaryParsers.testPreviewFrameParser" />
+        <item itemvalue="Gradle.TestBinaryParsers.testPreviewImageParser" />
+        <item itemvalue="Gradle.TestBinaryParsers.testPreviewFrameToImage" />
         <item itemvalue="Gradle.TestBinaryParsers" />
         <item itemvalue="Gradle.TestTextParsers" />
-        <item itemvalue="Kotlin.BinaryExampleFetcherKt" />
-        <item itemvalue="Gradle.TestTextParsers.testParseDiscovery" />
-        <item itemvalue="Gradle.TestUtilityFunctions" />
       </list>
     </recent_temporary>
   </component>
@@ -188,7 +215,7 @@
       <option name="presentableId" value="Default" />
       <updated>1686884861554</updated>
       <workItem from="1686884863004" duration="197270000" />
-      <workItem from="1687298224263" duration="41074000" />
+      <workItem from="1687298224263" duration="50046000" />
     </task>
     <task id="LOCAL-00001" summary="lol git">
       <created>1686965358941</created>
@@ -386,7 +413,14 @@
       <option name="project" value="LOCAL" />
       <updated>1687337842710</updated>
     </task>
-    <option name="localTasksCounter" value="29" />
+    <task id="LOCAL-00029" summary="AllPrograms parsing works">
+      <created>1687341459200</created>
+      <option name="number" value="00029" />
+      <option name="presentableId" value="LOCAL-00029" />
+      <option name="project" value="LOCAL" />
+      <updated>1687341459200</updated>
+    </task>
+    <option name="localTasksCounter" value="30" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -404,7 +438,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Total revamp" />
     <MESSAGE value="Total revamp, continued" />
     <MESSAGE value="Total revamp of core logic and builder ready for a workout" />
     <MESSAGE value="Implement interface in websocket client" />
@@ -429,6 +462,11 @@
     <MESSAGE value="Naming of various actors for better logging, still need to update logs around them" />
     <MESSAGE value="L O G G I N G" />
     <MESSAGE value="Json parsing tests passing" />
-    <option name="LAST_COMMIT_MESSAGE" value="Json parsing tests passing" />
+    <MESSAGE value="AllPrograms parsing works" />
+    <option name="LAST_COMMIT_MESSAGE" value="AllPrograms parsing works" />
+  </component>
+  <component name="XSLT-Support.FileAssociations.UIState">
+    <expand />
+    <select />
   </component>
 </project>

@@ -5,10 +5,8 @@ import industries.hannah.pixelblaze.*
 import io.ktor.http.content.*
 import io.ktor.websocket.*
 import org.junit.jupiter.api.Test
-import sun.awt.image.ToolkitImage
 import java.io.InputStream
 import java.util.*
-import javax.imageio.ImageIO
 import kotlin.streams.toList
 import kotlin.test.Ignore
 import kotlin.test.assertEquals
@@ -21,7 +19,7 @@ class TestBinaryParsers {
     // parse binary utility function to get an initial split of the frame, which takes some introspection into watcher
     // state
     private val pixelblaze = WebsocketPixelblaze.defaultBuilder()
-        .setErrorLog {t, str ->
+        .setErrorLog { t, str ->
             println("Error: '${str()}', thrown: '${t?.message ?: "Nothing"}'")
             t?.printStackTrace()
         }.setInfoLog { str -> println("Info: '${str()}'") }
@@ -29,59 +27,57 @@ class TestBinaryParsers {
         .build()
 
     @Test
-    @Ignore("No expected yet")
     fun testPreviewImageParser() {
         val (_, stream) = readInbound("/binary_samples/inbound/preview_image.b64")
-        val (patternId, img) = PreviewImage.fromBinary(stream)!!
-
-        val expectedPatternId = ""
-        assertEquals(expectedPatternId, patternId)
+        val parsed = PreviewImage.fromBinary(stream)!!
+        assertEquals("vkpGsR88dcJmXfevp", parsed.patternId)
 
         // It worked once, the expected image here was manually verified
-        val expectedRaw = readExpected("/binary_samples/expected/preview_frame.jpg")
-        val expectedImage = ImageIO.read(expectedRaw.inputStream())!!
+        val expectedRaw = readExpected("/binary_samples/expected/preview_image.jpg").inputStream()
+        while (true) {
+            val parsedStreamRead = parsed.imgBytes.read()
+            val expectedRead = expectedRaw.read()
+            assertEquals(expectedRead, parsedStreamRead)
 
-        for (x in 0 until 10) {
-            for (y in 0 until 1024) {
-                assertEquals(expectedImage.getRGB(x, y), img.getRGB(x, y))
+            if (parsedStreamRead < 0) {
+                break
             }
         }
     }
 
     @Test
-    @Ignore("No expected yet")
     fun testPreviewFrameParser() {
         val (_, stream) = readInbound("/binary_samples/inbound/preview_frame.b64")
         val frame = PreviewFrame.fromBinary(stream)!!
 
-        val expected = gson.fromJson<List<Triple<UByte, UByte, UByte>>>(
-            readExpected("/binary_samples/expected/preview_frame.json")
-                .inputStream()
-                .bufferedReader(),
-            List::class.java
-        ).map { (r, g, b) -> Pixel(r, g, b) }
+        val expected = readExpected("/binary_samples/expected/preview_frame.txt")
+            .inputStream()
+            .bufferedReader()
+            .lines()
+            .map { it.toInt() }
+            .toList()
 
         assertEquals(expected, frame.pixels)
     }
 
     @Test
-    @Ignore("No expected yet")
+    @Ignore
     fun testPreviewFrameToImage() {
-        val (_, stream) = readInbound("/binary_samples/inbound/preview_frame.b64")
-
-        val fromBinary = PreviewFrame.fromBinary(stream)!!
-        val previewImage = fromBinary.toImage(1024u, 10u)
-        val bufferedImage = (previewImage as ToolkitImage).bufferedImage
-
-        // It worked once, the expected image here was manually verified
-        val expectedRaw = readExpected("/binary_samples/expected/preview_frame.jpg")
-        val expectedImage = ImageIO.read(expectedRaw.inputStream())!!
-
-        for (x in 0 until 10) {
-            for (y in 0 until 1024) {
-                assertEquals(expectedImage.getRGB(x, y), bufferedImage.getRGB(x, y))
-            }
-        }
+//        val (_, stream) = readInbound("/binary_samples/inbound/preview_frame.b64")
+//
+//        val fromBinary = PreviewFrame.fromBinary(stream)!!
+//        val previewImage = fromBinary.toImage(1024u, 10u)
+//        val bufferedImage = (previewImage as ToolkitImage).bufferedImage
+//
+//        // It worked once, the expected image here was manually verified
+//        val expectedRaw = readExpected("/binary_samples/expected/preview_frame.jpg")
+//        val expectedImage = ImageIO.read(expectedRaw.inputStream())!!
+//
+//        for (x in 0 until 10) {
+//            for (y in 0 until 1024) {
+//                assertEquals(expectedImage.getRGB(x, y), bufferedImage.getRGB(x, y))
+//            }
+//        }
     }
 
     @Test
@@ -111,9 +107,8 @@ class TestBinaryParsers {
     private fun readInbound(path: String): Pair<InboundBinary<*>, InputStream> =
         object {}.javaClass.getResource(path)?.readText()?.run {
             val binaryFrame = pixelblaze.readBinaryFrame(Frame.Binary(true, Base64.getDecoder().decode(this)))
-            println("Got type: ${binaryFrame?.first} for file $path")
-
-            binaryFrame!!
+            println("Got type: ${binaryFrame?.first}(${BinaryTypeFlag.fromByte(binaryFrame!!.first.binaryFlag)}) for file $path")
+            binaryFrame
         }!!
 
     private fun readExpected(path: String): ByteArray =
