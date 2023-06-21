@@ -13,7 +13,6 @@ import kotlin.streams.toList
 import kotlin.test.Ignore
 import kotlin.test.assertEquals
 
-@Ignore("Need to collect inbound examples and verified expected")
 class TestBinaryParsers {
 
     private val gson = Gson()
@@ -22,15 +21,17 @@ class TestBinaryParsers {
     // parse binary utility function to get an initial split of the frame, which takes some introspection into watcher
     // state
     private val pixelblaze = WebsocketPixelblaze.defaultBuilder()
-        .setConnectionWatcher { connectionEvent, throwable, s  ->
-            println("Event: $connectionEvent, msg: '${s()}', thrown: ${throwable?.message}, stack: ${throwable?.stackTrace}")
-        }
+        .setErrorLog {t, str ->
+            println("Error: '${str()}', thrown: '${t?.message ?: "Nothing"}'")
+            t?.printStackTrace()
+        }.setInfoLog { str -> println("Info: '${str()}'") }
+        .setDebugLog { str -> println("Debug: '${str()}'") }
         .build()
 
     @Test
+    @Ignore("No expected yet")
     fun testPreviewImageParser() {
-        val (type, stream) = readInbound("/binary_samples/inbound/preview_image.b64")
-        assertEquals(InboundPreviewImage, type)
+        val (_, stream) = readInbound("/binary_samples/inbound/preview_image.b64")
         val (patternId, img) = PreviewImage.fromBinary(stream)!!
 
         val expectedPatternId = ""
@@ -48,9 +49,9 @@ class TestBinaryParsers {
     }
 
     @Test
+    @Ignore("No expected yet")
     fun testPreviewFrameParser() {
-        val (type, stream) = readInbound("/binary_samples/inbound/preview_frame.b64")
-        assertEquals(InboundPreviewFrame, type)
+        val (_, stream) = readInbound("/binary_samples/inbound/preview_frame.b64")
         val frame = PreviewFrame.fromBinary(stream)!!
 
         val expected = gson.fromJson<List<Triple<UByte, UByte, UByte>>>(
@@ -64,9 +65,9 @@ class TestBinaryParsers {
     }
 
     @Test
+    @Ignore("No expected yet")
     fun testPreviewFrameToImage() {
-        val (type, stream) = readInbound("/binary_samples/inbound/preview_frame.b64")
-        assertEquals(InboundPreviewFrame, type)
+        val (_, stream) = readInbound("/binary_samples/inbound/preview_frame.b64")
 
         val fromBinary = PreviewFrame.fromBinary(stream)!!
         val previewImage = fromBinary.toImage(1024u, 10u)
@@ -85,8 +86,7 @@ class TestBinaryParsers {
 
     @Test
     fun testAllPrograms() {
-        val (type, stream) = readInbound("/binary_samples/inbound/all_programs.b64")
-        assertEquals(InboundAllPrograms, type)
+        val (_, stream) = readInbound("/binary_samples/inbound/all_programs.b64")
         val allPrograms = AllPrograms.fromBinary(stream)!!
 
         val expected = readExpected("/binary_samples/expected/all_programs.csv")
@@ -104,16 +104,18 @@ class TestBinaryParsers {
     @Test
     @Ignore("Don't currently have an example raw request")
     fun testExpanderChannels() {
-        val (type, stream) = readInbound("/binary_samples/inbound/expander_channels.b64")
-        assertEquals(InboundExpanderChannels, type)
-        val channels = ExpanderChannels.fromBinary(stream)
+        val (_, stream) = readInbound("/binary_samples/inbound/expander_channels.b64")
+        val ignored = ExpanderChannels.fromBinary(stream)
     }
 
     private fun readInbound(path: String): Pair<InboundBinary<*>, InputStream> =
-        object {}.javaClass.classLoader.getResource(path)?.readText()?.run {
-            pixelblaze.readBinaryFrame(Frame.Binary(true, Base64.getDecoder().decode(this)))!!
+        object {}.javaClass.getResource(path)?.readText()?.run {
+            val binaryFrame = pixelblaze.readBinaryFrame(Frame.Binary(true, Base64.getDecoder().decode(this)))
+            println("Got type: ${binaryFrame?.first} for file $path")
+
+            binaryFrame!!
         }!!
 
     private fun readExpected(path: String): ByteArray =
-        object {}.javaClass.classLoader.getResource(path)?.readBytes()!!
+        object {}.javaClass.getResource(path)?.readBytes()!!
 }

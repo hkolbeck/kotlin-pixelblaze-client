@@ -115,8 +115,6 @@ fun handleConnectionIssues(event: ConnectionEvent, message: String?, thrown: Thr
     // Do what is necessary
 }
 
-/* ... */
-
 val pixelblaze = WebsocketPixelblaze.defaultBuilder()
     .setConnectionWatcher(::handleConnectionIssues)
     .build()
@@ -127,9 +125,7 @@ Local Pixelblaze Discovery
 --------------------------
 
 Pixelblaze offers a utility to discover controllers on your local network if that network is connected to the internet.
-To do so, use the `Discovery` class. If you call `getDiscovery()` it will use the same HTTP client as the Pixelblaze
-instance. If you need an instance with its own client or without creating a Pixelblaze instance, its constructor is
-also exposed
+To do so, use the `Discovery` class.
 
 ```kotlin
 val pixelblaze = Pixelblaze.default()

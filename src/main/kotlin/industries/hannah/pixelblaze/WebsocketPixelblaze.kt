@@ -57,7 +57,7 @@ class WebsocketPixelblaze internal constructor(
     private var activeMessageType: InboundBinary<*>? = null
 
     private val cache: AtomicReference<PixelblazeStateCache?> = AtomicReference(null)
-    private val discovery = Discovery(httpClient)
+    private val discovery = Discovery(HttpClient())
 
     internal data class TextParser<Message : InboundMessage>(
         val name: String,
@@ -582,7 +582,7 @@ class WebsocketPixelblaze internal constructor(
             return null
         } else {
             val typeFlag = frame.data[0]
-            debugLog { "Got message with type ${BinaryTypeFlag.fromByte(typeFlag)}" }
+            debugLog { "Got message with type ${BinaryTypeFlag.fromByte(typeFlag) ?: typeFlag}" }
 
             if (typeFlag == InboundPreviewFrame.binaryFlag) { //Preview frames are never split
                 // Not even debug logging this, they spam to the point of unreadability
@@ -594,6 +594,7 @@ class WebsocketPixelblaze internal constructor(
             } else {
                 // This is just to prevent unneeded work, still need to check below because concurrency
                 if (!binaryParsers.containsKey(typeFlag)) {
+                    debugLog { "Dropping message with $typeFlag because no parser exists for it" }
                     return null
                 }
 
