@@ -11,7 +11,7 @@ class PixelblazeConfig(
     saveAfterWriteBufferSize: UInt = 10u,
     val sleepOnNothingToDo: Duration = 10.toDuration(DurationUnit.MILLISECONDS),
     val sleepStrategyOnDisconnect: (UInt) -> Duration = { retry ->
-        (retry.toLong()).toDuration(DurationUnit.MILLISECONDS)
+        (10 * (1 shl retry.coerceIn(0u, 8u).toInt())).toDuration(DurationUnit.MILLISECONDS)
     },
 ) {
     val inboundBufferQueueDepth: Int = inboundBufferQueueDepth.toInt()

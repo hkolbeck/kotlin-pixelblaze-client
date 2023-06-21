@@ -40,14 +40,13 @@ val pixelblaze = WebsocketPixelblaze.defaultBuilder()
 
 /**
  * Get a builder with nothing set. Have fun don't die. The example here specifies all required fields, but does
- * not explicitly set up any parsers, meaning that all inbound traffic will be discarded.
+ * not explicitly set up any parsers, meaning that all inbound traffic will be discarded until some are added.
  */
 val pixelblaze = WebsocketPixelblaze.bareBuilder()
     .setPixelblazeIp("10.0.0.68")
     .setPort(81)
-    .setConfig(
-        PixelblazeConfig(
-            ...
+    .setConfig(PixelblazeConfig(
+        requestQueueDepth = 50u // Config objects have their own defaults specified, with no way to avoid them 
     ))
     .setHttpClient(HttpClient {
         install(WebSockets) // Must install WebSockets, no other HttpClient needs
