@@ -170,7 +170,7 @@ class WebsocketPixelblaze internal constructor(
                     }
                 }
 
-                id = addWatcher(inboundType, watchFn)
+                id = addWatcher("issueOutboundAndAwait", inboundType, watchFn)
                 sendOutbound(msg)
             }
         } finally {

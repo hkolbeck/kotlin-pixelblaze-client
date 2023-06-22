@@ -55,7 +55,11 @@ class PixelblazeStateCache(
 
         if (!excludedOutboundTypes.contains(OutboundGetSystemState)) {
             watcherIds.add(pixelblaze.addWatcher("State cache settings", InboundSettings) { settingsHolder.set(it) })
-            watcherIds.add(pixelblaze.addWatcher(InboundExpanderChannels) { expanderChannelsHolder.set(it) })
+            watcherIds.add(
+                pixelblaze.addWatcher(
+                    "State cache expander channels",
+                    InboundExpanderChannels
+                ) { expanderChannelsHolder.set(it) })
             // This also requests a sequencer state, but we want to watch that no matter what
             scheduleIds.add(pixelblaze.repeatOutbound(refreshRates.systemState, Duration.ZERO) { GetSystemState })
         }

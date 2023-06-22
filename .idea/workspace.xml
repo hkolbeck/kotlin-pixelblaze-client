@@ -8,52 +8,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="bac320fe-f3d8-48cb-8294-7d2b1eca689a" name="Changes" comment="Scrap image handling because no AWT on android and no android libs work on non-android. Will have to put them in a sub-lib">
-      <change afterPath="$PROJECT_DIR$/android/.gitignore" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/android/build.gradle.kts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/android/proguard-rules.pro" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/android/src/androidTest/kotlin/industries/hannah/pixelblaze/android/TestAndroidImageUtils.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/android/src/main/AndroidManifest.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/android/src/main/kotlin/industries/hannah/pixelblaze/AndroidImageUtils.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/build.gradle.kts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/test/resources/binary_samples/inbound/expander_channels.b64" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/test/resources/binary_samples/inbound/preview_frame.b64" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/src/test/resources/binary_samples/inbound/preview_image.b64" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/stdlib/build.gradle.kts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/stdlib/src/main/kotlin/industries/hannah/pixelblaze/stdlib/StdlibImageUtils.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/gradle.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/gradle.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+    <list default="true" id="bac320fe-f3d8-48cb-8294-7d2b1eca689a" name="Changes" comment="Basic android image handling is working. Wow that was an adventure.">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/build.gradle.kts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/gradle.properties" beforeDir="false" afterPath="$PROJECT_DIR$/gradle.properties" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/settings.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/settings.gradle.kts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/Discovery.kt" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/kotlin/industries/hannah/pixelblaze/Discovery.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/Enums.kt" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/kotlin/industries/hannah/pixelblaze/Enums.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/Inbound.kt" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/kotlin/industries/hannah/pixelblaze/Inbound.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/Outbound.kt" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/kotlin/industries/hannah/pixelblaze/Outbound.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/Pixelblaze.kt" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/kotlin/industries/hannah/pixelblaze/Pixelblaze.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/PixelblazeConfig.kt" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/kotlin/industries/hannah/pixelblaze/PixelblazeConfig.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/PixelblazeStateCache.kt" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/kotlin/industries/hannah/pixelblaze/PixelblazeStateCache.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/WebsocketPixelblaze.kt" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/kotlin/industries/hannah/pixelblaze/WebsocketPixelblaze.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/examples/BasicClientUsage.kt" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/kotlin/industries/hannah/pixelblaze/examples/BasicClientUsage.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/examples/CustomMessages.kt" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/kotlin/industries/hannah/pixelblaze/examples/CustomMessages.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/examples/HandlingPatternChanges.kt" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/kotlin/industries/hannah/pixelblaze/examples/HandlingPatternChanges.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/examples/LiveBrightnessUpdate.kt" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/kotlin/industries/hannah/pixelblaze/examples/LiveBrightnessUpdate.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/kotlin/industries/hannah/pixelblaze/test/BinaryExampleFetcher.kt" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/test/kotlin/industries/hannah/pixelblaze/test/BinaryExampleFetcher.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/kotlin/industries/hannah/pixelblaze/test/TestBinaryParsers.kt" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/test/kotlin/industries/hannah/pixelblaze/test/TestBinaryParsers.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/kotlin/industries/hannah/pixelblaze/test/TestTextParsers.kt" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/test/kotlin/industries/hannah/pixelblaze/test/TestTextParsers.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/kotlin/industries/hannah/pixelblaze/test/TestUtilityFunctions.kt" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/test/kotlin/industries/hannah/pixelblaze/test/TestUtilityFunctions.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/kotlin/industries/hannah/pixelblaze/test/functional/TestBasicOperation.kt" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/test/kotlin/industries/hannah/pixelblaze/test/functional/TestBasicOperation.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/kotlin/industries/hannah/pixelblaze/test/functional/TestStateCache.kt" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/test/kotlin/industries/hannah/pixelblaze/test/functional/TestStateCache.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/resources/binary_samples/expected/all_programs.csv" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/test/resources/binary_samples/expected/all_programs.csv" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/resources/binary_samples/expected/preview_frame.txt" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/test/resources/binary_samples/expected/preview_frame.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/resources/binary_samples/expected/preview_image.jpg" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/test/resources/binary_samples/expected/preview_image.jpg" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/resources/binary_samples/inbound/all_programs.b64" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/test/resources/binary_samples/inbound/all_programs.b64" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/resources/binary_samples/inbound/expander_channels.b64" beforeDir="false" afterPath="$PROJECT_DIR$/android/consumer-rules.pro" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/resources/binary_samples/inbound/preview_frame.b64" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/resources/binary_samples/inbound/preview_image.b64" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/kotlin/industries/hannah/pixelblaze/PixelblazeStateCache.kt" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/kotlin/industries/hannah/pixelblaze/PixelblazeStateCache.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/kotlin/industries/hannah/pixelblaze/WebsocketPixelblaze.kt" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/kotlin/industries/hannah/pixelblaze/WebsocketPixelblaze.kt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -282,7 +240,7 @@
       <workItem from="1687298224263" duration="56679000" />
       <workItem from="1687380190440" duration="7990000" />
       <workItem from="1687388234024" duration="4421000" />
-      <workItem from="1687392718835" duration="3596000" />
+      <workItem from="1687392718835" duration="4306000" />
     </task>
     <task id="LOCAL-00001" summary="lol git">
       <created>1686965358941</created>
@@ -494,7 +452,14 @@
       <option name="project" value="LOCAL" />
       <updated>1687373691776</updated>
     </task>
-    <option name="localTasksCounter" value="31" />
+    <task id="LOCAL-00031" summary="Basic android image handling is working. Wow that was an adventure.">
+      <created>1687396617650</created>
+      <option name="number" value="00031" />
+      <option name="presentableId" value="LOCAL-00031" />
+      <option name="project" value="LOCAL" />
+      <updated>1687396617650</updated>
+    </task>
+    <option name="localTasksCounter" value="32" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -512,7 +477,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Total revamp of core logic and builder ready for a workout" />
     <MESSAGE value="Implement interface in websocket client" />
     <MESSAGE value="Polish off impl" />
     <MESSAGE value="Add default builder and client" />
@@ -537,7 +501,8 @@
     <MESSAGE value="Json parsing tests passing" />
     <MESSAGE value="AllPrograms parsing works" />
     <MESSAGE value="Scrap image handling because no AWT on android and no android libs work on non-android. Will have to put them in a sub-lib" />
-    <option name="LAST_COMMIT_MESSAGE" value="Scrap image handling because no AWT on android and no android libs work on non-android. Will have to put them in a sub-lib" />
+    <MESSAGE value="Basic android image handling is working. Wow that was an adventure." />
+    <option name="LAST_COMMIT_MESSAGE" value="Basic android image handling is working. Wow that was an adventure." />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />
