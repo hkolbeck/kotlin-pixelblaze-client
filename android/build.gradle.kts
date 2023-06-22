@@ -31,7 +31,7 @@ android {
 
     dependencies {
         implementation(project(":core"))
-//    implementation("com.squareup:gifencoder:0.10.1")
+        // implementation("com.squareup:gifencoder:0.10.1")
 
         androidTestImplementation(kotlin("test"))
         androidTestImplementation(platform("org.junit:junit-bom:5.9.3"))

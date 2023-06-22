@@ -17,6 +17,10 @@ allprojects {
         gradlePluginPortal()
         google()
     }
+
+    group = "industries.hannah.pixelblaze"
+    version = "0.1.0"
+    description = "A client for the Pixelblaze LED controller"
 }
 
 tasks.withType<Test> {
