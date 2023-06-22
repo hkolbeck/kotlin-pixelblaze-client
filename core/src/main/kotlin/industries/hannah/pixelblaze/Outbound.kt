@@ -4,36 +4,37 @@ import com.google.gson.Gson
 import io.ktor.websocket.*
 import kotlin.math.min
 import kotlin.math.roundToInt
+import kotlin.reflect.KClass
 
 sealed interface Outbound<R> {
     val frameType: FrameType
 }
 
 abstract class OutboundText<R : OutboundJsonMessage<*>>(
-    val messageClass: Class<R>
+    val messageClass: KClass<R>
 ) : Outbound<R> {
     override val frameType = FrameType.TEXT
 }
 
-object OutboundGetPlaylist : OutboundText<GetPlaylist>(GetPlaylist::class.java)
-object OutboundSetPlaylistPosition : OutboundText<SetPlaylistPosition>(SetPlaylistPosition::class.java)
-object OutboundGetPatternControls : OutboundText<GetPatternControls>(GetPatternControls::class.java)
-object OutboundGetPreviewImage : OutboundText<GetPreviewImage>(GetPreviewImage::class.java)
-object OutboundSetSendUpdates : OutboundText<SetSendUpdates>(SetSendUpdates::class.java)
+object OutboundGetPlaylist : OutboundText<GetPlaylist>(GetPlaylist::class)
+object OutboundSetPlaylistPosition : OutboundText<SetPlaylistPosition>(SetPlaylistPosition::class)
+object OutboundGetPatternControls : OutboundText<GetPatternControls>(GetPatternControls::class)
+object OutboundGetPreviewImage : OutboundText<GetPreviewImage>(GetPreviewImage::class)
+object OutboundSetSendUpdates : OutboundText<SetSendUpdates>(SetSendUpdates::class)
 object OutboundSetCurrentPatternControls :
-    OutboundText<SetCurrentPatternControls>(SetCurrentPatternControls::class.java)
+    OutboundText<SetCurrentPatternControls>(SetCurrentPatternControls::class)
 
-object OutboundSetBrightness : OutboundText<SetBrightness>(SetBrightness::class.java)
-object OutboundSetMaxBrightness : OutboundText<SetMaxBrightness>(SetMaxBrightness::class.java)
-object OutboundSetPixelCount : OutboundText<SetPixelCount>(SetPixelCount::class.java)
-object OutboundGetAllPrograms : OutboundText<GetAllPrograms>(GetAllPrograms::class.java)
-object OutboundNextPattern : OutboundText<NextPattern>(NextPattern::class.java)
-object OutboundGetPeers : OutboundText<GetPeers>(GetPeers::class.java)
-object OutboundGetSystemState : OutboundText<GetSystemState>(GetSystemState::class.java)
+object OutboundSetBrightness : OutboundText<SetBrightness>(SetBrightness::class)
+object OutboundSetMaxBrightness : OutboundText<SetMaxBrightness>(SetMaxBrightness::class)
+object OutboundSetPixelCount : OutboundText<SetPixelCount>(SetPixelCount::class)
+object OutboundGetAllPrograms : OutboundText<GetAllPrograms>(GetAllPrograms::class)
+object OutboundNextPattern : OutboundText<NextPattern>(NextPattern::class)
+object OutboundGetPeers : OutboundText<GetPeers>(GetPeers::class)
+object OutboundGetSystemState : OutboundText<GetSystemState>(GetSystemState::class)
 
-object OutboundSetRunSequencer : OutboundText<SetRunSequencer>(SetRunSequencer::class.java)
-object OutboundPing : OutboundText<Ping>(Ping::class.java)
-class OutboundRawText<R : OutboundJsonMessage<*>>(messageClass: Class<R>) : OutboundText<R>(messageClass)
+object OutboundSetRunSequencer : OutboundText<SetRunSequencer>(SetRunSequencer::class)
+object OutboundPing : OutboundText<Ping>(Ping::class)
+class OutboundRawText<R : OutboundJsonMessage<*>>(messageClass: KClass<R>) : OutboundText<R>(messageClass)
 
 
 abstract class OutboundBinary<R>(

@@ -1,40 +1,24 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-
-plugins {
-    kotlin("jvm") version "1.8.21"
-    application
-}
-
-group = "industries.hannah"
-version = "0.0.1-SNAPSHOT"
-
-repositories {
-    mavenCentral()
-}
-
-val ktorVersion: String by project
-dependencies {
-    implementation("io.ktor:ktor-client-core:$ktorVersion")
-    implementation("io.ktor:ktor-client-cio:$ktorVersion")
-    implementation("io.ktor:ktor-client-websockets:$ktorVersion")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.1")
-    implementation("com.google.code.gson:gson:2.10.1")
-//    implementation("com.squareup:gifencoder:0.10.1")
-//    implementation("com.squareup.picasso:picasso:2.71828")
-
-    testImplementation(kotlin("test"))
-    testImplementation(platform("org.junit:junit-bom:5.9.3"))
-    testImplementation("org.junit.jupiter:junit-jupiter")
-}
-
-tasks.test {
-    useJUnitPlatform()
-
-    testLogging {
-        events("passed", "skipped", "failed")
+buildscript {
+    dependencies {
+        classpath("de.mannodermaus.gradle.plugins:android-junit5:1.9.3.0")
     }
 }
 
-tasks.withType<KotlinCompile> {
-    kotlinOptions.jvmTarget = "1.8"
+plugins {
+    kotlin("jvm") version "1.8.21"
+    id("com.android.library") version "7.2.0" apply false
+    id("org.jetbrains.kotlin.android") version "1.8.21" apply false
+    id("de.mannodermaus.android-junit5") version "1.9.3.0" apply false
+}
+
+allprojects {
+    repositories {
+        mavenCentral()
+        gradlePluginPortal()
+        google()
+    }
+}
+
+tasks.withType<Test> {
+    useJUnitPlatform()
 }

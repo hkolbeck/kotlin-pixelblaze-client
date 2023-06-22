@@ -975,6 +975,13 @@ class WebsocketPixelblaze internal constructor(
         }
     }
 
+    fun testUtil(): TestUtil = TestUtil(this)
+
+    class TestUtil(private val pixelblaze: WebsocketPixelblaze) {
+        fun readBinaryFrame(raw: ByteArray): Pair<InboundBinary<*>, InputStream>? =
+            pixelblaze.readBinaryFrame(Frame.Binary(true, raw))
+    }
+
     companion object {
 
         private fun binaryParserName(id: ParserID, name: String?, binaryFlag: Byte, msgType: InboundBinary<*>): String =

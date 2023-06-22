@@ -164,14 +164,22 @@ Examples
 -------
 
 A few simple usage examples are offered in the 
-[`examples` directory](/src/main/kotlin/industries/hannah/pixelblaze/examples)
+[`examples` directory](/core/src/main/kotlin/industries/hannah/pixelblaze/examples)
 
 
 Advanced Usage
 --------------
 
-See [this example](/src/main/kotlin/industries/hannah/pixelblaze/examples/CustomMessages.kt) for how to go about
+See [this example](/core/src/main/kotlin/industries/hannah/pixelblaze/examples/CustomMessages.kt) for how to go about
 implementing your own types.
+
+
+TODO
+----
+
+- Finish image handling on Android and with the stdlib
+- Add binary sensor data client in separate module
+- Flesh out comments on things other than the main interface
 
 
 Contributing

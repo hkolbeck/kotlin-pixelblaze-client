@@ -15,7 +15,7 @@ import kotlinx.coroutines.runBlocking
  * All outbound types must extend OutboundText or OutboundBinary depending on what websocket format
  * they're transmitted in
  */
-object MyOutboundMessageType : OutboundText<MyOutboundMessage>(MyOutboundMessage::class.java)
+object MyOutboundMessageType : OutboundText<MyOutboundMessage>(MyOutboundMessage::class)
 
 /**
  * Outbound messages must extend OutboundJsonMessage or OutboundBinaryMessage, but a variety of helper
@@ -28,7 +28,7 @@ object MyOutboundMessage : StringLiteralTextMessage("""{"doTheThing": true}""") 
 /**
  * All inbound types must implement InboundText or InboundBinary
  */
-object MyInboundMessageType : InboundText<MyInboundMessage>(MyInboundMessage::class.java)
+object MyInboundMessageType : InboundText<MyInboundMessage>(MyInboundMessage::class)
 
 /**
  * There are no bounds on inbound message shape, but they must inherit the InboundMessage marker interface

@@ -3,13 +3,12 @@ package industries.hannah.pixelblaze
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import io.ktor.websocket.*
-import java.awt.Image
-import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
 import java.io.DataInputStream
 import java.io.InputStream
 import java.io.PushbackInputStream
 import java.lang.reflect.Type
+import kotlin.reflect.KClass
 import kotlin.streams.toList
 
 sealed interface Inbound<T : InboundMessage> {
@@ -48,7 +47,7 @@ object InboundExpanderChannels : InboundBinary<ExpanderChannels>(9)
 class InboundRawBinary<T : InboundMessage>(binaryFlag: Byte) : InboundBinary<T>(binaryFlag)
 
 
-abstract class InboundText<T : InboundMessage>(val extractedType: Type) : Inbound<T> {
+abstract class InboundText<T : InboundMessage>(val extractedType: KClass<*>) : Inbound<T> {
     override val frameType = FrameType.TEXT
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -69,14 +68,14 @@ abstract class InboundText<T : InboundMessage>(val extractedType: Type) : Inboun
     override fun toString(): String = this.javaClass.name
 }
 
-object InboundStats : InboundText<Stats>(Stats::class.java)
-object InboundSequencerState : InboundText<SequencerState>(SequencerState::class.java)
-object InboundSettings : InboundText<Settings>(Settings::class.java)
-object InboundPeers : InboundText<Peers>(Peers::class.java)
-object InboundPlaylist : InboundText<Playlist>(Playlist::class.java)
-object InboundPlaylistUpdate : InboundText<PlaylistUpdate>(PlaylistUpdate::class.java)
-object InboundAck : InboundText<Ack>(Ack::class.java)
-class InboundParsedText<T : InboundMessage>(extractedType: Type) : InboundText<T>(extractedType)
+object InboundStats : InboundText<Stats>(Stats::class)
+object InboundSequencerState : InboundText<SequencerState>(SequencerState::class)
+object InboundSettings : InboundText<Settings>(Settings::class)
+object InboundPeers : InboundText<Peers>(Peers::class)
+object InboundPlaylist : InboundText<Playlist>(Playlist::class)
+object InboundPlaylistUpdate : InboundText<PlaylistUpdate>(PlaylistUpdate::class)
+object InboundAck : InboundText<Ack>(Ack::class)
+class InboundParsedText<T : InboundMessage>(clazz: KClass<T>) : InboundText<T>(clazz)
 
 interface InboundMessage
 
@@ -475,39 +474,56 @@ data class PreviewImage(
     }
 }
 
-//Per creator
-const val PREVIEW_FRAME_MAX_LEN = 1024
+data class Pixel(
+    val red: Byte,
+    val green: Byte,
+    val blue: Byte
+)
 
 data class PreviewFrame(
-    val pixels: List<Int>
+    val rawBytes: ByteArray
 ) : InboundMessage {
 
-//    fun toImage(width: UInt, height: UInt): Image {
-//        val buffer = pixels.map { it }.toIntArray()
-//        val image = BufferedImage(width.toInt(), height.toInt(), BufferedImage.TYPE_INT_ARGB)
-//        image.setRGB(0, 0, buffer.size, 1, buffer, 0, 1)
-//
-//        return image.getScaledInstance(width.toInt(), height.toInt(), Image.SCALE_FAST)
-//    }
+    fun toPixels(): List<Pixel> {
+        val pixels = mutableListOf<Pixel>()
+        for (idx in rawBytes.indices step 3) {
+            pixels += Pixel(
+                red = rawBytes[idx],
+                green = rawBytes[idx + 1],
+                blue = rawBytes[idx + 2]
+            )
+        }
+
+        return pixels
+    }
+
+    fun toIntArray(): IntArray {
+        val arr = IntArray(rawBytes.size / 3)
+        for (idx in rawBytes.indices step 3) {
+            arr[idx / 3] = (rawBytes[idx].toUByte().toInt() shl 16) or
+                    (rawBytes[idx + 1].toUByte().toInt() shl 8) or
+                    rawBytes[idx + 2].toUByte().toInt() or
+                    (0xFF shl 24)
+        }
+
+        return arr
+    }
 
     companion object {
-        fun fromBinary(stream: InputStream): PreviewFrame? {
-            val pixels = ArrayList<Int>(PREVIEW_FRAME_MAX_LEN)
+        fun fromBinary(stream: InputStream): PreviewFrame = PreviewFrame(stream.readBytes())
+    }
 
-            while (pixels.size < PREVIEW_FRAME_MAX_LEN) {
-                val red = stream.read()
-                val green = stream.read()
-                val blue = stream.read()
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is PreviewFrame) return false
 
-                if (red < 0 || green < 0 || blue < 0) {
-                    break;
-                }
+        if (!rawBytes.contentEquals(other.rawBytes)) return false
 
-                pixels.add((red shl 16) or (green shl 8) or blue)
-            }
+        return true
+    }
 
-            return PreviewFrame(pixels)
-        }
+    override fun hashCode(): Int {
+        return rawBytes.contentHashCode()
     }
 }
 

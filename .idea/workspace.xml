@@ -1,23 +1,66 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
+  <component name="AndroidLogFilters">
+    <option name="TOOL_WINDOW_LOG_LEVEL" value="error" />
+    <option name="TOOL_WINDOW_CONFIGURED_FILTER" value="Show only selected application" />
+  </component>
   <component name="AutoImportSettings">
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="bac320fe-f3d8-48cb-8294-7d2b1eca689a" name="Changes" comment="AllPrograms parsing works">
-      <change afterPath="$PROJECT_DIR$/src/test/resources/binary_samples/expected/preview_image.jpg" afterDir="false" />
+    <list default="true" id="bac320fe-f3d8-48cb-8294-7d2b1eca689a" name="Changes" comment="Scrap image handling because no AWT on android and no android libs work on non-android. Will have to put them in a sub-lib">
+      <change afterPath="$PROJECT_DIR$/android/.gitignore" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/android/build.gradle.kts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/android/proguard-rules.pro" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/android/src/androidTest/kotlin/industries/hannah/pixelblaze/android/TestAndroidImageUtils.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/android/src/main/AndroidManifest.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/android/src/main/kotlin/industries/hannah/pixelblaze/AndroidImageUtils.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/core/build.gradle.kts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/core/src/test/resources/binary_samples/inbound/expander_channels.b64" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/core/src/test/resources/binary_samples/inbound/preview_frame.b64" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/core/src/test/resources/binary_samples/inbound/preview_image.b64" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/stdlib/build.gradle.kts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/stdlib/src/main/kotlin/industries/hannah/pixelblaze/stdlib/StdlibImageUtils.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/gradle.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/gradle.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/build.gradle.kts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/Inbound.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/Inbound.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/kotlin/industries/hannah/pixelblaze/test/TestBinaryParsers.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/kotlin/industries/hannah/pixelblaze/test/TestBinaryParsers.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/resources/binary_samples/expected/preview_frame.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/resources/binary_samples/inbound/preview_image.b64" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/resources/binary_samples/inbound/preview_image.b64" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gradle.properties" beforeDir="false" afterPath="$PROJECT_DIR$/gradle.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/settings.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/settings.gradle.kts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/Discovery.kt" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/kotlin/industries/hannah/pixelblaze/Discovery.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/Enums.kt" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/kotlin/industries/hannah/pixelblaze/Enums.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/Inbound.kt" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/kotlin/industries/hannah/pixelblaze/Inbound.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/Outbound.kt" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/kotlin/industries/hannah/pixelblaze/Outbound.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/Pixelblaze.kt" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/kotlin/industries/hannah/pixelblaze/Pixelblaze.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/PixelblazeConfig.kt" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/kotlin/industries/hannah/pixelblaze/PixelblazeConfig.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/PixelblazeStateCache.kt" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/kotlin/industries/hannah/pixelblaze/PixelblazeStateCache.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/WebsocketPixelblaze.kt" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/kotlin/industries/hannah/pixelblaze/WebsocketPixelblaze.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/examples/BasicClientUsage.kt" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/kotlin/industries/hannah/pixelblaze/examples/BasicClientUsage.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/examples/CustomMessages.kt" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/kotlin/industries/hannah/pixelblaze/examples/CustomMessages.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/examples/HandlingPatternChanges.kt" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/kotlin/industries/hannah/pixelblaze/examples/HandlingPatternChanges.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/kotlin/industries/hannah/pixelblaze/examples/LiveBrightnessUpdate.kt" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/kotlin/industries/hannah/pixelblaze/examples/LiveBrightnessUpdate.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/kotlin/industries/hannah/pixelblaze/test/BinaryExampleFetcher.kt" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/test/kotlin/industries/hannah/pixelblaze/test/BinaryExampleFetcher.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/kotlin/industries/hannah/pixelblaze/test/TestBinaryParsers.kt" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/test/kotlin/industries/hannah/pixelblaze/test/TestBinaryParsers.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/kotlin/industries/hannah/pixelblaze/test/TestTextParsers.kt" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/test/kotlin/industries/hannah/pixelblaze/test/TestTextParsers.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/kotlin/industries/hannah/pixelblaze/test/TestUtilityFunctions.kt" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/test/kotlin/industries/hannah/pixelblaze/test/TestUtilityFunctions.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/kotlin/industries/hannah/pixelblaze/test/functional/TestBasicOperation.kt" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/test/kotlin/industries/hannah/pixelblaze/test/functional/TestBasicOperation.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/kotlin/industries/hannah/pixelblaze/test/functional/TestStateCache.kt" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/test/kotlin/industries/hannah/pixelblaze/test/functional/TestStateCache.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/resources/binary_samples/expected/all_programs.csv" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/test/resources/binary_samples/expected/all_programs.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/resources/binary_samples/expected/preview_frame.txt" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/test/resources/binary_samples/expected/preview_frame.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/resources/binary_samples/expected/preview_image.jpg" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/test/resources/binary_samples/expected/preview_image.jpg" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/resources/binary_samples/inbound/all_programs.b64" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/test/resources/binary_samples/inbound/all_programs.b64" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/resources/binary_samples/inbound/expander_channels.b64" beforeDir="false" afterPath="$PROJECT_DIR$/android/consumer-rules.pro" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/resources/binary_samples/inbound/preview_frame.b64" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/resources/binary_samples/inbound/preview_image.b64" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
+  <component name="ExecutionTargetManager" SELECTED_TARGET="device_and_snapshot_combo_box_target[/Users/hannahkolbeck/.android/avd/Pixel_XL_API_34.avd]" />
   <component name="ExternalProjectsData">
     <projectState path="$PROJECT_DIR$">
       <ProjectState />
@@ -29,7 +72,17 @@
         <task path="$PROJECT_DIR$">
           <activation />
         </task>
-        <projects_view />
+        <projects_view>
+          <tree_state>
+            <expand>
+              <path>
+                <item name="" type="6a2764b6:ExternalProjectsStructure$RootNode" />
+                <item name="kotlin-pixelblaze-client" type="f1a62948:ProjectNode" />
+              </path>
+            </expand>
+            <select />
+          </tree_state>
+        </projects_view>
       </state>
     </system>
   </component>
@@ -58,30 +111,103 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "RunOnceActivity.OpenProjectViewOnStart": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "WebServerToolWindowFactoryState": "false",
-    "nodejs_package_manager_path": "npm",
-    "project.structure.last.edited": "Modules",
-    "project.structure.proportion": "0.17",
-    "project.structure.side.proportion": "0.2",
-    "settings.editor.selected.configurable": "reference.settings.ide.settings.notifications"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
+    &quot;jdk.selected.JAVA_MODULE&quot;: &quot;1.8&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/Users/hannahkolbeck/Code/kotlin-pixelblaze-client/android/src/test/resources&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;Modules&quot;,
+    &quot;project.structure.proportion&quot;: &quot;0.17&quot;,
+    &quot;project.structure.side.proportion&quot;: &quot;0.2&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;reference.settingsdialog.project.gradle&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/android/src/test/resources" />
+      <recent name="$PROJECT_DIR$/android/libs" />
+      <recent name="$PROJECT_DIR$/stdlib" />
+      <recent name="$PROJECT_DIR$/android" />
+    </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/core" />
+      <recent name="$PROJECT_DIR$/stdlib/srcmain/main" />
       <recent name="$PROJECT_DIR$/src/test/resources/binary_samples/inbound" />
       <recent name="$PROJECT_DIR$/src/test/resources/binary_samples" />
     </key>
     <key name="CreateKotlinClassDialog.RecentsKey">
       <recent name="industries.hannah.pixelblaze" />
     </key>
+    <key name="MoveKotlinTopLevelDeclarationsDialog.RECENTS_KEY">
+      <recent name="industries.hannah.pixelblaze" />
+    </key>
   </component>
-  <component name="RunManager" selected="Gradle.TestBinaryParsers.testPreviewFrameParser">
-    <configuration name="TestBinaryParsers" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
+  <component name="RunManager" selected="Android Instrumented Tests.testFrameToImage()">
+    <configuration name="TestAndroidImageUtils" type="AndroidTestRunConfigurationType" factoryName="Android Instrumented Tests" temporary="true" nameIsGenerated="true">
+      <module name="kotlin-pixelblaze-client.android" />
+      <option name="TESTING_TYPE" value="2" />
+      <option name="METHOD_NAME" value="" />
+      <option name="CLASS_NAME" value="industries.hannah.pixelblaze.android.TestAndroidImageUtils" />
+      <option name="PACKAGE_NAME" value="" />
+      <option name="INSTRUMENTATION_RUNNER_CLASS" value="" />
+      <option name="EXTRA_OPTIONS" value="" />
+      <option name="INCLUDE_GRADLE_EXTRA_OPTIONS" value="true" />
+      <option name="RETENTION_ENABLED" value="No" />
+      <option name="RETENTION_MAX_SNAPSHOTS" value="2" />
+      <option name="RETENTION_COMPRESS_SNAPSHOTS" value="false" />
+      <option name="CLEAR_LOGCAT" value="true" />
+      <option name="SHOW_LOGCAT_AUTOMATICALLY" value="false" />
+      <option name="INSPECTION_WITHOUT_ACTIVITY_RESTART" value="false" />
+      <option name="TARGET_SELECTION_MODE" value="SHOW_DIALOG" />
+      <option name="DEBUGGER_TYPE" value="Java" />
+      <Java />
+      <Profilers>
+        <option name="ADVANCED_PROFILING_ENABLED" value="false" />
+        <option name="STARTUP_PROFILING_ENABLED" value="false" />
+        <option name="STARTUP_CPU_PROFILING_ENABLED" value="false" />
+        <option name="STARTUP_CPU_PROFILING_CONFIGURATION_NAME" value="Java/Kotlin Method Sample (legacy)" />
+        <option name="STARTUP_NATIVE_MEMORY_PROFILING_ENABLED" value="false" />
+        <option name="NATIVE_MEMORY_SAMPLE_RATE_BYTES" value="2048" />
+      </Profilers>
+      <method v="2">
+        <option name="Android.Gradle.BeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="testFrameToImage()" type="AndroidTestRunConfigurationType" factoryName="Android Instrumented Tests" temporary="true" nameIsGenerated="true">
+      <module name="kotlin-pixelblaze-client.android" />
+      <option name="TESTING_TYPE" value="3" />
+      <option name="METHOD_NAME" value="testFrameToImage" />
+      <option name="CLASS_NAME" value="industries.hannah.pixelblaze.android.TestAndroidImageUtils" />
+      <option name="PACKAGE_NAME" value="" />
+      <option name="INSTRUMENTATION_RUNNER_CLASS" value="" />
+      <option name="EXTRA_OPTIONS" value="" />
+      <option name="INCLUDE_GRADLE_EXTRA_OPTIONS" value="true" />
+      <option name="RETENTION_ENABLED" value="No" />
+      <option name="RETENTION_MAX_SNAPSHOTS" value="2" />
+      <option name="RETENTION_COMPRESS_SNAPSHOTS" value="false" />
+      <option name="CLEAR_LOGCAT" value="false" />
+      <option name="SHOW_LOGCAT_AUTOMATICALLY" value="false" />
+      <option name="INSPECTION_WITHOUT_ACTIVITY_RESTART" value="false" />
+      <option name="TARGET_SELECTION_MODE" value="DEVICE_AND_SNAPSHOT_COMBO_BOX" />
+      <option name="DEBUGGER_TYPE" value="Java" />
+      <Java />
+      <Profilers>
+        <option name="ADVANCED_PROFILING_ENABLED" value="false" />
+        <option name="STARTUP_PROFILING_ENABLED" value="false" />
+        <option name="STARTUP_CPU_PROFILING_ENABLED" value="false" />
+        <option name="STARTUP_CPU_PROFILING_CONFIGURATION_NAME" value="Java/Kotlin Method Sample (legacy)" />
+        <option name="STARTUP_NATIVE_MEMORY_PROFILING_ENABLED" value="false" />
+        <option name="NATIVE_MEMORY_SAMPLE_RATE_BYTES" value="2048" />
+      </Profilers>
+      <method v="2">
+        <option name="Android.Gradle.BeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="TestAndroidImageUtils" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
       <ExternalSystemSettings>
         <option name="executionName" />
         <option name="externalProjectPath" value="$PROJECT_DIR$" />
@@ -92,9 +218,9 @@
         </option>
         <option name="taskNames">
           <list>
-            <option value=":test" />
+            <option value=":android:testDebugUnitTest" />
             <option value="--tests" />
-            <option value="&quot;industries.hannah.pixelblaze.test.TestBinaryParsers&quot;" />
+            <option value="&quot;industries.hannah.pixelblaze.android.TestAndroidImageUtils&quot;" />
           </list>
         </option>
         <option name="vmOptions" />
@@ -104,7 +230,7 @@
       <DebugAllEnabled>false</DebugAllEnabled>
       <method v="2" />
     </configuration>
-    <configuration name="TestBinaryParsers.testPreviewFrameParser" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
+    <configuration name="TestAndroidImageUtils.testFrameToImage" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
       <ExternalSystemSettings>
         <option name="executionName" />
         <option name="externalProjectPath" value="$PROJECT_DIR$" />
@@ -115,9 +241,9 @@
         </option>
         <option name="taskNames">
           <list>
-            <option value=":test" />
+            <option value=":android:testDebugUnitTest" />
             <option value="--tests" />
-            <option value="&quot;industries.hannah.pixelblaze.test.TestBinaryParsers.testPreviewFrameParser&quot;" />
+            <option value="&quot;industries.hannah.pixelblaze.android.TestAndroidImageUtils.testFrameToImage&quot;" />
           </list>
         </option>
         <option name="vmOptions" />
@@ -127,82 +253,20 @@
       <DebugAllEnabled>false</DebugAllEnabled>
       <method v="2" />
     </configuration>
-    <configuration name="TestBinaryParsers.testPreviewFrameToImage" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
-      <ExternalSystemSettings>
-        <option name="executionName" />
-        <option name="externalProjectPath" value="$PROJECT_DIR$" />
-        <option name="externalSystemIdString" value="GRADLE" />
-        <option name="scriptParameters" value="" />
-        <option name="taskDescriptions">
-          <list />
-        </option>
-        <option name="taskNames">
-          <list>
-            <option value=":test" />
-            <option value="--tests" />
-            <option value="&quot;industries.hannah.pixelblaze.test.TestBinaryParsers.testPreviewFrameToImage&quot;" />
-          </list>
-        </option>
-        <option name="vmOptions" />
-      </ExternalSystemSettings>
-      <ExternalSystemDebugServerProcess>false</ExternalSystemDebugServerProcess>
-      <ExternalSystemReattachDebugProcess>true</ExternalSystemReattachDebugProcess>
-      <DebugAllEnabled>false</DebugAllEnabled>
-      <method v="2" />
-    </configuration>
-    <configuration name="TestBinaryParsers.testPreviewImageParser" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
-      <ExternalSystemSettings>
-        <option name="executionName" />
-        <option name="externalProjectPath" value="$PROJECT_DIR$" />
-        <option name="externalSystemIdString" value="GRADLE" />
-        <option name="scriptParameters" value="" />
-        <option name="taskDescriptions">
-          <list />
-        </option>
-        <option name="taskNames">
-          <list>
-            <option value=":test" />
-            <option value="--tests" />
-            <option value="&quot;industries.hannah.pixelblaze.test.TestBinaryParsers.testPreviewImageParser&quot;" />
-          </list>
-        </option>
-        <option name="vmOptions" />
-      </ExternalSystemSettings>
-      <ExternalSystemDebugServerProcess>false</ExternalSystemDebugServerProcess>
-      <ExternalSystemReattachDebugProcess>true</ExternalSystemReattachDebugProcess>
-      <DebugAllEnabled>false</DebugAllEnabled>
-      <method v="2" />
-    </configuration>
-    <configuration name="TestTextParsers" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
-      <ExternalSystemSettings>
-        <option name="executionName" />
-        <option name="externalProjectPath" value="$PROJECT_DIR$" />
-        <option name="externalSystemIdString" value="GRADLE" />
-        <option name="scriptParameters" value="" />
-        <option name="taskDescriptions">
-          <list />
-        </option>
-        <option name="taskNames">
-          <list>
-            <option value=":test" />
-            <option value="--tests" />
-            <option value="&quot;industries.hannah.pixelblaze.test.TestTextParsers&quot;" />
-          </list>
-        </option>
-        <option name="vmOptions" />
-      </ExternalSystemSettings>
-      <ExternalSystemDebugServerProcess>false</ExternalSystemDebugServerProcess>
-      <ExternalSystemReattachDebugProcess>true</ExternalSystemReattachDebugProcess>
-      <DebugAllEnabled>false</DebugAllEnabled>
-      <method v="2" />
+    <configuration name="build.gradle.kts (1)" type="KotlinStandaloneScriptRunConfigurationType" temporary="true" nameIsGenerated="true">
+      <module name="kotlin-pixelblaze-client" />
+      <option name="filePath" value="$PROJECT_DIR$/build.gradle.kts" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
     </configuration>
     <recent_temporary>
       <list>
-        <item itemvalue="Gradle.TestBinaryParsers.testPreviewFrameParser" />
-        <item itemvalue="Gradle.TestBinaryParsers.testPreviewImageParser" />
-        <item itemvalue="Gradle.TestBinaryParsers.testPreviewFrameToImage" />
-        <item itemvalue="Gradle.TestBinaryParsers" />
-        <item itemvalue="Gradle.TestTextParsers" />
+        <item itemvalue="Android Instrumented Tests.testFrameToImage()" />
+        <item itemvalue="Android Instrumented Tests.TestAndroidImageUtils" />
+        <item itemvalue="Kotlin script (Beta).build.gradle.kts (1)" />
+        <item itemvalue="Gradle.TestAndroidImageUtils.testFrameToImage" />
+        <item itemvalue="Gradle.TestAndroidImageUtils" />
       </list>
     </recent_temporary>
   </component>
@@ -215,7 +279,10 @@
       <option name="presentableId" value="Default" />
       <updated>1686884861554</updated>
       <workItem from="1686884863004" duration="197270000" />
-      <workItem from="1687298224263" duration="50046000" />
+      <workItem from="1687298224263" duration="56679000" />
+      <workItem from="1687380190440" duration="7990000" />
+      <workItem from="1687388234024" duration="4421000" />
+      <workItem from="1687392718835" duration="3596000" />
     </task>
     <task id="LOCAL-00001" summary="lol git">
       <created>1686965358941</created>
@@ -420,7 +487,14 @@
       <option name="project" value="LOCAL" />
       <updated>1687341459200</updated>
     </task>
-    <option name="localTasksCounter" value="30" />
+    <task id="LOCAL-00030" summary="Scrap image handling because no AWT on android and no android libs work on non-android. Will have to put them in a sub-lib">
+      <created>1687373691776</created>
+      <option name="number" value="00030" />
+      <option name="presentableId" value="LOCAL-00030" />
+      <option name="project" value="LOCAL" />
+      <updated>1687373691776</updated>
+    </task>
+    <option name="localTasksCounter" value="31" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -438,7 +512,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Total revamp, continued" />
     <MESSAGE value="Total revamp of core logic and builder ready for a workout" />
     <MESSAGE value="Implement interface in websocket client" />
     <MESSAGE value="Polish off impl" />
@@ -463,7 +536,8 @@
     <MESSAGE value="L O G G I N G" />
     <MESSAGE value="Json parsing tests passing" />
     <MESSAGE value="AllPrograms parsing works" />
-    <option name="LAST_COMMIT_MESSAGE" value="AllPrograms parsing works" />
+    <MESSAGE value="Scrap image handling because no AWT on android and no android libs work on non-android. Will have to put them in a sub-lib" />
+    <option name="LAST_COMMIT_MESSAGE" value="Scrap image handling because no AWT on android and no android libs work on non-android. Will have to put them in a sub-lib" />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />

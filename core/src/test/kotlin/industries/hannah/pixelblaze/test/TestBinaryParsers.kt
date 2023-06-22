@@ -13,8 +13,6 @@ import kotlin.test.assertEquals
 
 class TestBinaryParsers {
 
-    private val gson = Gson()
-
     // Won't be connected, but we don't need it to be. Will be a little bit chatty. We're just using the client
     // parse binary utility function to get an initial split of the frame, which takes some introspection into watcher
     // state
@@ -25,6 +23,8 @@ class TestBinaryParsers {
         }.setInfoLog { str -> println("Info: '${str()}'") }
         .setDebugLog { str -> println("Debug: '${str()}'") }
         .build()
+
+    private val testUtil = pixelblaze.testUtil()
 
     @Test
     fun testPreviewImageParser() {
@@ -48,16 +48,16 @@ class TestBinaryParsers {
     @Test
     fun testPreviewFrameParser() {
         val (_, stream) = readInbound("/binary_samples/inbound/preview_frame.b64")
-        val frame = PreviewFrame.fromBinary(stream)!!
+        val frame = PreviewFrame.fromBinary(stream)
 
         val expected = readExpected("/binary_samples/expected/preview_frame.txt")
             .inputStream()
             .bufferedReader()
             .lines()
             .map { it.toInt() }
-            .toList()
+            .toList().toIntArray()
 
-        assertEquals(expected, frame.pixels)
+        assertEquals(expected, frame.toIntArray())
     }
 
     @Test
@@ -106,7 +106,7 @@ class TestBinaryParsers {
 
     private fun readInbound(path: String): Pair<InboundBinary<*>, InputStream> =
         object {}.javaClass.getResource(path)?.readText()?.run {
-            val binaryFrame = pixelblaze.readBinaryFrame(Frame.Binary(true, Base64.getDecoder().decode(this)))
+            val binaryFrame = testUtil.readBinaryFrame(Base64.getDecoder().decode(this))
             println("Got type: ${binaryFrame?.first}(${BinaryTypeFlag.fromByte(binaryFrame!!.first.binaryFlag)}) for file $path")
             binaryFrame
         }!!
