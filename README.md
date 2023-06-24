@@ -32,24 +32,29 @@ val pixelblaze = Pixelblaze.default("10.0.0.68")
 /**
  * Get a builder with required fields set
  *
- * Note that when specifying anything except the address, it's necessary to use the implementation class's functions
+ * Note that when specifying anything except the address, it's necessary 
+ * to use the implementation class's functions
  */
 val pixelblaze = WebsocketPixelblaze.defaultBuilder()
     .setConfig(PixelblazeConfig(requestQueueDepth = 100u))
     .build()
 
 /**
- * Get a builder with nothing set. Have fun don't die. The example here specifies all required fields, but does
- * not explicitly set up any parsers, meaning that all inbound traffic will be discarded until some are added.
+ * Get a builder with nothing set. Have fun don't die. The example here 
+ * specifies all required fields, but does not explicitly set up any 
+ * parsers, meaning that all inbound traffic will be discarded until 
+ * some are added.
  */
 val pixelblaze = WebsocketPixelblaze.bareBuilder()
     .setPixelblazeIp("10.0.0.68")
     .setPort(81)
     .setConfig(PixelblazeConfig(
-        requestQueueDepth = 50u // Config objects have their own defaults specified, with no way to avoid them 
+        // Config objects have their own defaults specified, with no way to avoid them
+        requestQueueDepth = 50u  
     ))
     .setHttpClient(HttpClient {
-        install(WebSockets) // Must install WebSockets, no other HttpClient needs
+        // Must install WebSockets, no other HttpClient needs
+        install(WebSockets) 
     })
     .setIoLoopDispatcher(Dispatchers.IO)
     .setRepeatedOutboundDispatcher(Dispatchers.Default)
@@ -77,10 +82,7 @@ You can also issue a request with a synchronous response, but it's fragile and d
 To send repeated messages on a cadence, use `repeatOutbound()`. It generates and sends messages at a specified interval
 
 ```kotlin
-pixelblaze.repeatOutbound(
-    msgGenerator = { GetSystemState },
-    interval = 10.seconds
-)
+pixelblaze.repeatOutbound(10.seconds) { GetSystemState }
 ```
 
 Many operations require frequent updates to some value, but in order to spare the Pixelblaze's flash memory you want
@@ -88,8 +90,11 @@ to only save the value occasionally. `saveAfter()` provides a way to send writes
 most recent update has not yet been saved.
 
 ```kotlin
-val sendChannel = pixelblaze.saveAfter(3.seconds) { brightness: Float, save -> SetBrightness(brightness, save) }
-sendChannel.trySend(0.5f) // Or send() is also possible from a coroutine context or using runBlocking {}
+val sendChannel = pixelblaze.saveAfter(3.seconds) { 
+        brightness: Float, save -> SetBrightness(brightness, save) 
+    }
+sendChannel.trySend(0.5f) //In a standard thread context
+sendChannel.send(0.5f) //In a coroutine or runBlocking { ... }
 ```
 
 Receiving Inbound Messages
@@ -111,7 +116,11 @@ All actual communication with the Pixelblaze occurs in a coroutine (by default u
 To detect and handle connection issues, a function can be provided in the builder:
 
 ```kotlin
-fun handleConnectionIssues(event: ConnectionEvent, message: String?, thrown: Throwable?) {
+fun handleConnectionIssues(
+    event: ConnectionEvent, 
+    thrown: Throwable?,
+    message: () -> String?
+) {
     // Do what is necessary
 }
 
@@ -145,7 +154,8 @@ values may not be available immediately, though they are requested immediately.
 ```kotlin
 val pixelblaze = Pixelblaze.default()
 val stateCache = pixelblaze.getStateCache()
-stateCache.awaitFill(3.seconds) || throw RuntimeException("Cache never populated!")
+stateCache.awaitFill(3.seconds) || 
+    throw RuntimeException("Cache never populated!")
 
 val currentPlaylistIdx = stateCache.currentPlaylistIndex()!!
 ```
