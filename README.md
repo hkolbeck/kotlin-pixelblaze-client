@@ -73,7 +73,7 @@ The simplest way to send messages is with `issueOutbound()`. Note that this exam
 It takes a message and places it in the outbound queue, returning only whether that enqueue operation was successful.
 
 ```kotlin
-pixelblaze.issueOutbound(Ping)
+pixelblaze.sendOutbound(Ping)
 ```
 
 You can also issue a request with a synchronous response, but it's fragile and discouraged. Please read the

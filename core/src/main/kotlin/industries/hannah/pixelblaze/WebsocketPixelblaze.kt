@@ -27,6 +27,7 @@ import kotlin.time.toJavaDuration
 
 internal typealias SaveAfterID = UUID
 
+@Suppress("UNCHECKED_CAST", "NewApi")
 class WebsocketPixelblaze internal constructor(
     private val address: String,
     private val port: Int,

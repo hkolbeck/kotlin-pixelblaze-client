@@ -8,10 +8,16 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="bac320fe-f3d8-48cb-8294-7d2b1eca689a" name="Changes" comment="Last bits of cleanup">
+    <list default="true" id="bac320fe-f3d8-48cb-8294-7d2b1eca689a" name="Changes" comment="Little bit more gradle cleanup">
+      <change afterPath="$PROJECT_DIR$/sensor/.gitignore" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/sensor/build.gradle.kts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/sensor/src/main/java/industries/hannah/pixelblaze/sensor/SensorClient.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/gradle.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/gradle.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/android/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/android/build.gradle.kts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/build.gradle.kts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/kotlin/industries/hannah/pixelblaze/WebsocketPixelblaze.kt" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/kotlin/industries/hannah/pixelblaze/WebsocketPixelblaze.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/settings.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/settings.gradle.kts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -49,8 +55,8 @@
       <list>
         <option value="Kotlin Sealed Interface" />
         <option value="Kotlin Data Class" />
-        <option value="Kotlin Class" />
         <option value="Kotlin File" />
+        <option value="Kotlin Class" />
       </list>
     </option>
   </component>
@@ -240,7 +246,8 @@
       <workItem from="1687298224263" duration="56679000" />
       <workItem from="1687380190440" duration="7990000" />
       <workItem from="1687388234024" duration="4421000" />
-      <workItem from="1687392718835" duration="5245000" />
+      <workItem from="1687392718835" duration="43273000" />
+      <workItem from="1687582791411" duration="9552000" />
     </task>
     <task id="LOCAL-00001" summary="lol git">
       <created>1686965358941</created>
@@ -466,7 +473,14 @@
       <option name="project" value="LOCAL" />
       <updated>1687397054219</updated>
     </task>
-    <option name="localTasksCounter" value="33" />
+    <task id="LOCAL-00033" summary="Little bit more gradle cleanup">
+      <created>1687398104850</created>
+      <option name="number" value="00033" />
+      <option name="presentableId" value="LOCAL-00033" />
+      <option name="project" value="LOCAL" />
+      <updated>1687398104850</updated>
+    </task>
+    <option name="localTasksCounter" value="34" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -484,7 +498,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Polish off impl" />
     <MESSAGE value="Add default builder and client" />
     <MESSAGE value="Bit of cleanup, add ability to dispatch watchers on provided coroutine scope. Start adding examples." />
     <MESSAGE value="No more specifying type in outbound requests!" />
@@ -509,7 +522,8 @@
     <MESSAGE value="Scrap image handling because no AWT on android and no android libs work on non-android. Will have to put them in a sub-lib" />
     <MESSAGE value="Basic android image handling is working. Wow that was an adventure." />
     <MESSAGE value="Last bits of cleanup" />
-    <option name="LAST_COMMIT_MESSAGE" value="Last bits of cleanup" />
+    <MESSAGE value="Little bit more gradle cleanup" />
+    <option name="LAST_COMMIT_MESSAGE" value="Little bit more gradle cleanup" />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />
