@@ -267,7 +267,7 @@ interface Pixelblaze : Closeable {
         /**
          * Get a default client, specifying only the IP
          */
-        fun default(pixelblazeIp: String): Pixelblaze = WebsocketPixelblaze.defaultBuilder().build()
+        fun default(pixelblazeIp: String): Pixelblaze = WebsocketPixelblaze.defaultBuilder().setPixelblazeIp(pixelblazeIp).build()
 
         /**
          * Utility method to take a camelCase variable name and return "Camel Case". If it starts with "slider"
